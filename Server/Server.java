@@ -79,7 +79,7 @@ public class Server {
     	
     }
     public static void main(String[] args) throws Exception {
-        chatServer server = new chatServer();
+        Server server = new Server();
         server.start(6666);
     }
     
