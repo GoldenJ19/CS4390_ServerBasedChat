@@ -1,6 +1,6 @@
 /*
  *  File Name:      ChatServerTest.java
- *  Author:        	Ahad Shabbir 
+ *  Author:         Ahad Shabbir 
  *  Last Modified:  03/13/2022 Ahad Shabbir 
  *  Description: Basic client app to help test the server.
  */
@@ -17,32 +17,32 @@ public class ChatServerTest {
     private BufferedReader in;
 
     public void startConnection(String ip, int port) throws Exception {
-        clientSocket = new Socket(ip, port);
-        out = new PrintWriter(clientSocket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+	clientSocket = new Socket(ip, port);
+	out = new PrintWriter(clientSocket.getOutputStream(), true);
+	in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
     }
 
     public String sendMessage(String msg) throws Exception {
-        out.println(msg);
+	out.println(msg);
 
-		String resp = "";
-		for (int i = 0; i < 3; i++) {
-			resp += in.readLine() + "\n";
-		}
-        return resp;
+	String resp = "";
+	for (int i = 0; i < 3; i++) {
+	    resp += in.readLine() + "\n";
+	}
+	return resp;
     }
 
     public void stopConnection() throws Exception {
-        in.close();
-        out.close();
-        clientSocket.close();
+	in.close();
+	out.close();
+	clientSocket.close();
     }
 
-	public static void main(String args[]) throws Exception {
-		ChatServerTest client = new ChatServerTest();
-		client.startConnection("127.0.0.1", 6666);
-		String resp = client.sendMessage("START\nMSGTYPE: CONNECT\n AHAD 1 END\n");
-		System.out.println(resp);
-	}
+    public static void main(String args[]) throws Exception {
+	ChatServerTest client = new ChatServerTest();
+	client.startConnection("127.0.0.1", 6666);
+	String resp = client.sendMessage("START\nMSGTYPE: CONNECT\n AHAD 1 END\n");
+	System.out.println(resp);
+    }
 
 }
