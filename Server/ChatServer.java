@@ -13,7 +13,8 @@ public class ChatServer {
 	private Socket clientSocket;
 	private PrintWriter out;
 	private Scanner in;
-	
+	private ParseBuilder pb;	
+
 	private String[] subbedUsers = {"AHAD", "GRANT"};
 
 	public void start(int port) throws Exception {
@@ -21,33 +22,33 @@ public class ChatServer {
 		clientSocket = serverSocket.accept();
 		out = new PrintWriter(clientSocket.getOutputStream(), true);
 		in = new Scanner(clientSocket.getInputStream());
+		pb = new ParseBuilder(in);
 
-		parseMsgType(); 
-
-		/*String clientMsg = in.readLine();
-		System.out.println("got client message: " + clientMsg); 
-		out.printf("got this message from you '%s'\n", clientMsg);*/
+		String msgType;
+		msgType = pb.pass("START").pass("MSGTYPE:").extract();
+		switch(msgType) {
+			case "CONNECT":
+				connectHandler();
+				break;
+			default:
+				throw new Exception("invalid msgType");
+		}
 	}
 
-	private void parseMsgType() throws Exception {
+	/*private String parseMsgType() throws Exception {
 		String msgType = "";
+		
 		if (in.nextLine().equals("START")) {
 			if (in.next().equals("MSGTYPE:")) {
 				msgType = in.next();
-				switch (msgType) {
-					case "CONNECT":
-						connectHandler();
-						break;
-					default:
-						throw new Exception("couldn't find an implemented MSGTYPE in message body");
-				}
+				return msgType;
 			} else {
 				throw new Exception("couldn't find MSGTYPE after START line");
 			}
 		} else {
 			throw new Exception("message didn't start with START");
 		}
-	}
+	}*/
 
 	public void stop() throws Exception {
 		in.close();
@@ -57,8 +58,13 @@ public class ChatServer {
 	}
 	
 	private void connectHandler() throws Exception {
-		String username = in.next();
-		int rand_cookie = in.nextInt();
+		ParseBuilder pb = new ParseBuilder(in);
+		String username = pb.pass("USERNAME:").extract();
+		String randCookieStr = pb.pass("RAND_COOKIE:").extract();
+
+		int rand_cookie = Integer.parseInt(randCookieStr);
+		System.out.println("rand_cookie = " + rand_cookie);
+
 		boolean isSubbed = false;
 		for (String user : subbedUsers) {
 			if (username.equals(user)) {
@@ -74,7 +80,6 @@ public class ChatServer {
 			System.out.println("User " + username + " is NOT valid.");
 			stop();
 		}
-		
 	}
 
 	private void connectedResponse() {
@@ -83,7 +88,11 @@ public class ChatServer {
 
 	public static void main(String[] args) throws Exception {
 		ChatServer server = new ChatServer();
-		server.start(6666);
+		try {
+			server.start(6666);
+		} finally {
+			server.stop();
+		}
 	}
 	
 	

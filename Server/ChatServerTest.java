@@ -41,7 +41,7 @@ public class ChatServerTest {
     public static void main(String args[]) throws Exception {
 	ChatServerTest client = new ChatServerTest();
 	client.startConnection("127.0.0.1", 6666);
-	String resp = client.sendMessage("START\nMSGTYPE: CONNECT\n AHAD 1 END\n");
+	String resp = client.sendMessage("START\nMSGTYPE: CONNECT\n USERNAME: AHAD\nRAND_COOKIE: 1\nEND\n");
 	System.out.println(resp);
     }
 
