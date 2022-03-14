@@ -1,47 +1,53 @@
-package javatcpexample;
-
 import java.net.Socket;
 import java.net.ServerSocket;
+
 import java.io.PrintWriter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
 import java.util.Scanner;
 
-public class chatServer {
+public class ChatServer {
     private ServerSocket serverSocket;
     private Socket clientSocket;
     private PrintWriter out;
     private Scanner in;
     
-    private String[]subbedUsers = {"AHAD", "GRANT"};
+    private String[] subbedUsers = {"AHAD", "GRANT"};
 
     public void start(int port) throws Exception {
         serverSocket = new ServerSocket(port);
         clientSocket = serverSocket.accept();
         out = new PrintWriter(clientSocket.getOutputStream(), true);
         in = new Scanner(clientSocket.getInputStream());
-        
-        String msgType = "";
-        if(in.nextLine().equals("START")) {
-        	if(in.next().equals("MSGTYPE:")) {
-        		msgType = in.next();
-        		
-        		if(msgType.equals("CONNECT")) {
-        			connectHandler();
-        		}
-        		
-        		
-        	}
-        }
-        
-        else{
-        	System.out.println("Did not begin with START message.");
-        }
+
+       	parseMsgType(); 
+
         /*String clientMsg = in.readLine();
 		System.out.println("got client message: " + clientMsg);	
 		out.printf("got this message from you '%s'\n", clientMsg);*/
     }
+
+	private void parseMsgType() throws Exception {
+        String msgType = "";
+        if (in.nextLine().equals("START")) {
+        	if (in.next().equals("MSGTYPE:")) {
+        		msgType = in.next();
+				switch (msgType) {
+					case "CONNECT":
+						connectHandler();
+						break;
+					default:
+						throw new Exception("couldn't find an implemented MSGTYPE in message body");
+				}
+        	} else {
+				throw new Exception("couldn't find MSGTYPE after START line");
+			}
+        } else {
+			throw new Exception("message didn't start with START");
+		}
+	}
 
     public void stop() throws Exception {
         in.close();
@@ -50,28 +56,33 @@ public class chatServer {
         serverSocket.close();
     }
     
-    public void connectHandler() throws Exception {
+    private void connectHandler() throws Exception {
     	String username = in.next();
     	int rand_cookie = in.nextInt();
     	boolean isSubbed = false;
-    	for(String user:subbedUsers) {
-    		if(username.equals(user)) {
+    	for (String user : subbedUsers) {
+    		if (username.equals(user)) {
     			isSubbed = true;
     			break;
     		}
     	}
     	
-    	if(isSubbed) {
+    	if (isSubbed) {
     		System.out.println("User " + username + " is valid.");
-    	}
-    	else {
+			connectedResponse();
+    	} else {
     		System.out.println("User " + username + " is NOT valid.");
     		stop();
     	}
     	
     }
+
+	private void connectedResponse() {
+		out.printf("START\nMSGTYPE: CONNECTED\nEND\n");
+	}
+
     public static void main(String[] args) throws Exception {
-        chatServer server = new chatServer();
+        ChatServer server = new ChatServer();
         server.start(6666);
     }
     
