@@ -10,7 +10,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader; 
 import java.util.Scanner;
 
-public class Client {
+public class ChatClient {
     private Socket clientSocket;
     private PrintWriter out;
     private BufferedReader in;
@@ -23,7 +23,8 @@ public class Client {
 
     public String sendMessage(String msg) throws Exception {
         out.println(msg);
-        String resp = in.readLine();
+        String resp = in.readLine() + "\n" + in.readLine() + "\n" + in.readLine();
+
         return resp;
     }
 
@@ -34,12 +35,13 @@ public class Client {
     }
 
 	public static void main(String args[]) throws Exception {
-		chatClient client = new chatClient();
+		ChatClient client = new ChatClient();
 		client.startConnection("127.0.0.1", 6666);
 		//out.printf("START\nMSGTYPE: CONNECT\n GRANT 1 END");
 		//Scanner in = new Scanner(System.in);
 		//System.out.print("Enter message to send to server: ");
-		String resp = client.sendMessage("START\nMSGTYPE: CONNECT\n JUSTIN 1 END");
+		String resp = client.sendMessage("START\nMSGTYPE: CONNECT\n GRANT 1 END");
+		System.out.println(resp);
 		//System.out.printf("got response from server '%s'\n", resp);
 	}
 
