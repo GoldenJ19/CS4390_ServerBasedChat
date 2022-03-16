@@ -4,12 +4,13 @@
  *  Last Modified:  03/15/2022 Justin Hardy
  */
 
-import static java.lang.System.*;
-import java.net.Socket;
-import java.net.ConnectException;
 import java.io.PrintWriter;
-import java.util.Scanner;
+import java.net.ConnectException;
+import java.net.Socket;
 import java.util.Random;
+import java.util.Scanner;
+
+import static java.lang.System.*;
 
 public class ChatClient {
     private Socket clientSocket;

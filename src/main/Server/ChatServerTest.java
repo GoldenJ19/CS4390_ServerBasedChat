@@ -5,11 +5,10 @@
  *  Description: Basic client app to help test the server.
  */
 
-import java.net.Socket;
-import java.io.PrintWriter;
 import java.io.BufferedReader;
-import java.io.InputStreamReader; 
-import java.util.Scanner;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 
 public class ChatServerTest {
     private Socket clientSocket;
