@@ -1,0 +1,5 @@
+To execute client:
+mvn exec:java -Dexec.mainClass="org.teamnine.client.Client"
+
+To execute server:
+mvn exec:java -Dexec.mainClass="org.teamnine.client.Server"

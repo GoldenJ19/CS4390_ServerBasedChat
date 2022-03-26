@@ -3,6 +3,7 @@
  *  Author:         Justin Hardy
  *  Last Modified:  03/15/2022 Justin Hardy
  */
+package org.teamnine.client;
 
 import java.io.PrintWriter;
 import java.net.ConnectException;
@@ -10,9 +11,9 @@ import java.net.Socket;
 import java.util.Random;
 import java.util.Scanner;
 
-import static java.lang.System.*;
+import org.teamnine.common.ParseBuilder;
 
-public class ChatClient {
+public class Client {
     private Socket clientSocket;
     private PrintWriter socket_out;
     private Scanner socket_in;
@@ -132,7 +133,7 @@ public class ChatClient {
 
     public static void main(String args[]) throws Exception {
         // Establish client object
-        ChatClient chatClient = new ChatClient();
+        Client chatClient = new Client();
 
         // Try to connect
         boolean connected = false;
@@ -151,7 +152,7 @@ public class ChatClient {
 
                 // Exit program if they don't want to connect again
                 if(input.charAt(0) == 'N' || input.charAt(0) == 'n') {
-                    exit(0);
+                    System.exit(0);
                 }
             }
         } while(!connected);
