@@ -1,9 +1,13 @@
+package org.teamnine.server;
+
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class ChatServer {
+import org.teamnine.common.ParseBuilder;
+
+public class Server {
 	private ServerSocket serverSocket;
 	private Socket clientSocket;
 	private PrintWriter out;
@@ -46,10 +50,17 @@ public class ChatServer {
 	}*/
 
 	public void stop() throws Exception {
-		in.close();
-		out.close();
-		clientSocket.close();
-		serverSocket.close();
+		if (in != null)
+			in.close();
+		
+		if (out != null)
+			out.close();
+		
+		if (clientSocket != null)
+			clientSocket.close();
+		
+		if (serverSocket != null)
+			serverSocket.close();
 	}
 	
 	private void connectHandler() throws Exception {
@@ -82,7 +93,7 @@ public class ChatServer {
 	}
 
 	public static void main(String[] args) throws Exception {
-		ChatServer server = new ChatServer();
+		Server server = new Server();
 		try {
 			server.start(6666);
 		} finally {

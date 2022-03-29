@@ -2,3 +2,8 @@
 /shelf/
 /.idea/workspace.xml
 *.class
+target/*
+/target/
+.classpath
+.project
+.settings
