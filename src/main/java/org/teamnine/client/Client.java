@@ -83,13 +83,11 @@ public class Client {
                     break;
                 case "UNREACHABLE":
                     clientB = pb.pass("CLIENTB:").extract();
-                    ;
                     returnType = 2;
                     break;
                 case "CHAT":
                     seshID = Integer.parseInt(pb.pass("SESSION_ID:").extract());
                     message = pb.pass("CHAT_MESSAGE:").extract();
-                    ;
                     returnType = 3;
                     break;
                 default:
