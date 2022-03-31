@@ -1,3 +1,5 @@
+package org.teamnine.common;
+
 import java.util.Scanner;
 
 public class ParseBuilder {
