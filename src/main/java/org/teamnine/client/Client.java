@@ -158,6 +158,11 @@ public class Client {
         // Connection succeeded
         System.out.println("Successfully established connection to the server at IP address " + serverIP + " and port " + serverPort + ".");
 
+        //Allow the user to put in name of person they want to chat with
+        //create function call to chat with person
+
+
+        //connection has been made
 
     }
 
