@@ -13,11 +13,19 @@ public class ChatRoom {
 		busyUsers = new HashMap<String, ConnectionHandler>();
 	}
 
-	public synchronized registerUser(ConnectionHandler ch) {
-		connectedUsers.add(ch.getUsername(), ch);	
+	public synchronized void registerUser(ConnectionHandler ch) {
+		connectedUsers.put(ch.getUsername(), ch);	
+	}
+	
+	public synchronized void startChat(String A, String B) {
+		busyUsers.put(A, connectedUsers.get(A));
+		busyUsers.put(B, connectedUsers.get(B));
+	}
+	public boolean isReachable(String clientB) {
+		return (connectedUsers.containsKey(clientB) && !busyUsers.containsKey(clientB));
 	}
 
-	public synchronized sendChat(String otherUser, String msg) {
+	/*public synchronized void sendChat(String otherUser, String msg) {
 		ConnectionHandler otherUserHandler = connectedUsers.get(otherUser);
 		if (otherUserHandler == null)
 			if (busyUsers.containsKey(otherUser))
@@ -26,5 +34,5 @@ public class ChatRoom {
 				throw new Exception("User '"+otherUser+"' is not connected");
 
 		otherUserHandler.sendChat(msg);
-	}
+	}*/
 }
