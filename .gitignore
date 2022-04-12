@@ -1,6 +1,6 @@
 # Default ignored files
 /shelf/
-./.idea/*
+/.idea/*
 *.class
 target/*
 /target/
