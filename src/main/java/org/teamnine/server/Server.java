@@ -1,60 +1,41 @@
 package org.teamnine.server;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
-import org.teamnine.common.ParseException;
+import org.teamnine.common.ParseBuilder;
 
 public class Server {
 	private ServerSocket serverSocket;
-	private ChatRoom chatRoom;
-	private String[] subbedUsers = {"AHAD", "GRANT"};
-	private List<Thread> threads;
+	private Authenticator auth;
+	private Thread authThread;
 
-	public Server(int port) throws IOException {
-		serverSocket = new ServerSocket(port);
-		chatRoom = new ChatRoom();
-		threads = new ArrayList<Thread>();
+	public Server(int udpPort, int tcpPort) {
+		serverSocket = new ServerSocket(tcpPort);
+		// Start Authenticator
+		// this.auth = new Authenticator(udpPort);
+		// authThread = new Thread(new Authenticator(udpPort)
 	}
 
-	public void start() throws Exception {
+	public void start(int port) throws Exception {
+		serverSocket = new ServerSocket(port);
 		while (true) {
-			//Wait on next client socket
-			Socket clientSocket = serverSocket.accept();
-			
-			//Create new Connection Handler for new client
-			ConnectionHandler ch = new ConnectionHandler(chatRoom, clientSocket);
-			
-			//Attempt connection
-			boolean connected = false;
-			try {
-				connected = ch.initConnect();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				return;
-			}
-			catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			//Write CONNECTED to client if connection is successful, AUTH_FAIL otherwise		
-			if(connected){
-				ch.connectedResponse();
-				chatRoom.registerUser(ch);	
-				threads.add(new Thread(ch));
-			}
-			
-			else{
-				ch.authFailResponse();		
-			}
+			clientSocket = serverSocket.accept();
+			out = new PrintWriter(clientSocket.getOutputStream(), true);
+			in = new Scanner(clientSocket.getInputStream());
+			pb = new ParseBuilder(in);
 
+			String msgType;
+			msgType = pb.pass("START").pass("MSGTYPE:").extract();
+			switch(msgType) {
+				case "CONNECT":
+					connectHandler();
+					break;
+				default:
+					throw new Exception("invalid msgType");
+			}
 		}
 	}
 
@@ -70,17 +51,38 @@ public class Server {
 		int rand_cookie = Integer.parseInt(randCookieStr);
 		System.out.println("rand_cookie = " + rand_cookie);
 
-		for (Thread thread : threads) 
-			thread.join();
+		boolean isSubbed = false;
+		for (String user : subbedUsers) {
+			if (username.equals(user)) {
+				isSubbed = true;
+				break;
+			}
+		}
+		
+		if (isSubbed) {
+			System.out.println("User " + username + " is valid.");
+			// Create ConnectionHandler for thread
+			connectedResponse();
+			// Add ConnectionHandler user key pait to hashmap
+		} else {
+			System.out.println("User " + username + " is NOT valid.");
+			stop();
+		}
+	}
+
+	private void connectedResponse() {
+		out.printf("START\nMSGTYPE: CONNECTED\nEND\n");
 	}
 
 	public static void main(String[] args) throws Exception {
-		Server server = new Server(6666);
+		Server server = new Server();
 		try {
-			server.start();
+			server.start(6666);
 		} finally {
 			server.stop();
 		}
 	}
+	
+	
 }
 //there should be a separate clas clienthandler. accepting incoming requests. once it receives requests then its going to connect
