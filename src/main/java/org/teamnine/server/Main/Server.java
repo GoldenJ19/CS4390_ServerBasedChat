@@ -1,29 +1,42 @@
 package org.teamnine.server;
 
 import java.io.PrintWriter;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
-
+import java.sql.Connection;
+import java.sql.SQLException;
 import org.teamnine.common.ParseBuilder;
 
 public class Server {
 	private ServerSocket serverSocket;
-	private Authenticator auth;
-	private Thread authThread;
+	private Connection dbConn;
+	//private Authenticator auth;
+	//private Thread authThread;
 
-	public Server(int udpPort, int tcpPort) {
+	public Server(int udpPort, int tcpPort) 
+		throws IOException, SQLException, ClassNotFoundException {
+
+		dbConn = DatabaseSetup.setupDatabase("server.db");	
 		serverSocket = new ServerSocket(tcpPort);
-		// Start Authenticator
-		// this.auth = new Authenticator(udpPort);
-		// authThread = new Thread(new Authenticator(udpPort)
 	}
 
-	public void start(int port) throws Exception {
+	public void close() 
+		throws IOException, SQLException, ClassNotFoundException {
+
+		if (dbConn != null)
+			dbConn.close();
+
+		if (serverSocket != null)
+			serverSocket.close();
+	}
+
+	/*public void start(int port) throws Exception {
 		serverSocket = new ServerSocket(port);
 		while (true) {
 			clientSocket = serverSocket.accept();
-			out = new PrintWriter(clientSocket.getOutputStream(), true);
+			PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 			in = new Scanner(clientSocket.getInputStream());
 			pb = new ParseBuilder(in);
 
@@ -72,17 +85,11 @@ public class Server {
 
 	private void connectedResponse() {
 		out.printf("START\nMSGTYPE: CONNECTED\nEND\n");
-	}
+	}*/
 
 	public static void main(String[] args) throws Exception {
-		Server server = new Server();
-		try {
-			server.start(6666);
-		} finally {
-			server.stop();
-		}
+		Server server = new Server(1234, 5678);
+		server.close();
 	}
-	
-	
 }
 //there should be a separate clas clienthandler. accepting incoming requests. once it receives requests then its going to connect
