@@ -1,4 +1,4 @@
-package org.teamnine.server;
+package org.teamnine.server.Main;
 
 import java.io.PrintWriter;
 import java.io.IOException;
@@ -7,11 +7,15 @@ import java.net.Socket;
 import java.util.Scanner;
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.teamnine.server.ChatRoom.*;
 import org.teamnine.common.ParseBuilder;
+import org.teamnine.common.ParseException;
 
 public class Server {
 	private ServerSocket serverSocket;
 	private Connection dbConn;
+	private ChatRoom chatRoom;
+	private Thread chatRoomThread;
 	//private Authenticator auth;
 	//private Thread authThread;
 
@@ -20,76 +24,59 @@ public class Server {
 
 		dbConn = DatabaseSetup.setupDatabase("server.db");	
 		serverSocket = new ServerSocket(tcpPort);
+		chatRoom = new ChatRoom();
 	}
 
-	public void close() 
-		throws IOException, SQLException, ClassNotFoundException {
+	public void start() {
+		while (true) {
+			Socket clientSocket;
+			ConnectionHandler clientHandler;
 
+			try {
+				clientSocket = serverSocket.accept();
+				clientHandler = new ConnectionHandler(chatRoom, clientSocket);		
+			} catch (IOException e) {
+				System.out.println("Unexpected IOException when accepting TCP connection");
+				e.printStackTrace();
+				return;
+			}
+
+			try {
+				int randCookie = clientHandler.initConnect();
+				// TODO: Verify randcookie here
+				chatRoom.registerUser(clientHandler);
+				System.out.println("Registered user, sending connected response");
+				clientHandler.connectedResponse();
+				new Thread(clientHandler);
+			} catch (ParseException e) {
+				System.err.println("Invalid request from client detected.");	
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.err.println("Could not handle client connection.");
+				return;
+			}
+		}
+	}
+
+	public void close() throws Exception {
 		if (dbConn != null)
 			dbConn.close();
 
+		if (chatRoom != null)
+			chatRoom.closeRoom();
+
 		if (serverSocket != null)
 			serverSocket.close();
 	}
 
-	/*public void start(int port) throws Exception {
-		serverSocket = new ServerSocket(port);
-		while (true) {
-			clientSocket = serverSocket.accept();
-			PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-			in = new Scanner(clientSocket.getInputStream());
-			pb = new ParseBuilder(in);
-
-			String msgType;
-			msgType = pb.pass("START").pass("MSGTYPE:").extract();
-			switch(msgType) {
-				case "CONNECT":
-					connectHandler();
-					break;
-				default:
-					throw new Exception("invalid msgType");
-			}
-		}
-	}
-
-	public void stop() throws Exception {
-		if (serverSocket != null)
-			serverSocket.close();
-	}
-	
-	private void connectHandler() throws Exception {
-		ParseBuilder pb = new ParseBuilder(in);
-		String username = pb.pass("USERNAME:").extract();
-		String randCookieStr = pb.pass("RAND_COOKIE:").extract();
-		int rand_cookie = Integer.parseInt(randCookieStr);
-		System.out.println("rand_cookie = " + rand_cookie);
-
-		boolean isSubbed = false;
-		for (String user : subbedUsers) {
-			if (username.equals(user)) {
-				isSubbed = true;
-				break;
-			}
-		}
-		
-		if (isSubbed) {
-			System.out.println("User " + username + " is valid.");
-			// Create ConnectionHandler for thread
-			connectedResponse();
-			// Add ConnectionHandler user key pait to hashmap
-		} else {
-			System.out.println("User " + username + " is NOT valid.");
-			stop();
-		}
-	}
-
-	private void connectedResponse() {
-		out.printf("START\nMSGTYPE: CONNECTED\nEND\n");
-	}*/
 
 	public static void main(String[] args) throws Exception {
-		Server server = new Server(1234, 5678);
-		server.close();
+		Server server = null;
+		try {
+			server = new Server(1234, 5678);
+			server.start();
+		} finally {
+			server.close();
+		}
 	}
 }
-//there should be a separate clas clienthandler. accepting incoming requests. once it receives requests then its going to connect

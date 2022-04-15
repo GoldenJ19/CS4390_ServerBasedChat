@@ -8,3 +8,4 @@ target/*
 .project
 .settings
 server.db
+*.swp

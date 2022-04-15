@@ -1,4 +1,4 @@
-package org.teamnine.server;
+package org.teamnine.server.Main;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.DriverManager;
