@@ -1,23 +1,30 @@
-package org.teamnine.server;
+package org.teamnine.server.ChatRoom;
 
-import java.util.Map;
-import java.util.HashMap;
-
+import java.util.concurrent.ConcurrentHashMap;
 public class ChatRoom {
 
-	private Map<String, ConnectionHandler> connectedUsers;
-	private Map<String, ConnectionHandler> busyUsers;
+	private ConcurrentHashMap<String, ConnectionHandler> connectedUsers;
+	private ConcurrentHashMap<String, ConnectionHandler> busyUsers;
 
 	public ChatRoom() {
-		connectedUsers = new HashMap<String, ConnectionHandler>();
-		busyUsers = new HashMap<String, ConnectionHandler>();
+		connectedUsers = new ConcurrentHashMap<String, ConnectionHandler>();
+		busyUsers = new ConcurrentHashMap<String, ConnectionHandler>();
 	}
 
-	/*public synchronized void registerUser(ConnectionHandler ch) {
-		connectedUsers.add(ch.getUsername(), ch);	
+	public synchronized void registerUser(ConnectionHandler ch) {
+		connectedUsers.put(ch.getUsername(), ch);	
+		System.out.println("User "+ch.getUsername()+" is registered.");
 	}
 
-	public synchronized void sendChat(String otherUser, String msg) {
+	public synchronized void unregisterUser(ConnectionHandler ch) {
+		connectedUsers.remove(ch.getUsername());
+		System.out.println("User "+ch.getUsername()+" is unregistered.");
+	}
+
+	public void closeRoom() {
+		// TODO: Disconnect all users on chatroom close.
+	}
+	/*public synchronized void sendChat(String clientB, String msg) {
 		ConnectionHandler otherUserHandler = connectedUsers.get(otherUser);
 		if (otherUserHandler == null)
 			if (busyUsers.containsKey(otherUser))
