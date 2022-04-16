@@ -1,4 +1,4 @@
-package org.teamnine.server.Main;
+package org.teamnine.server;
 
 import java.io.PrintWriter;
 import java.io.IOException;
@@ -16,8 +16,6 @@ public class Server {
 	private Connection dbConn;
 	private ChatRoom chatRoom;
 	private Thread chatRoomThread;
-	//private Authenticator auth;
-	//private Thread authThread;
 
 	public Server(int udpPort, int tcpPort) 
 		throws IOException, SQLException, ClassNotFoundException {

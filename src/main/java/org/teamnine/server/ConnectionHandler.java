@@ -1,4 +1,4 @@
-package org.teamnine.server.ChatRoom;
+package org.teamnine.server;
 
 import java.io.PrintWriter;
 import java.io.IOException;
@@ -14,11 +14,12 @@ public class ConnectionHandler implements Runnable {
 	private ParseBuilder pb;	
 	private PrintWriter out;
 	private String username;
-
-	public ConnectionHandler(ChatRoom chatRoom, Socket clientSocket) throws IOException {
+	private int randCookie;
+	
+	public ConnectionHandler(ChatRoom chatRoom, int portNum, int randCookie) throws IOException {
 		this.chatRoom = chatRoom;
 		this.clientSocket = clientSocket;
-
+		this.randCookie = randCookie;
 		this.out = new PrintWriter(clientSocket.getOutputStream(), true);
 
 		Scanner in = new Scanner(clientSocket.getInputStream());

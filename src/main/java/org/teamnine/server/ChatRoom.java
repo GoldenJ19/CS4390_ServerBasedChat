@@ -1,4 +1,4 @@
-package org.teamnine.server.ChatRoom;
+package org.teamnine.server;
 
 import java.util.concurrent.ConcurrentHashMap;
 public class ChatRoom {
