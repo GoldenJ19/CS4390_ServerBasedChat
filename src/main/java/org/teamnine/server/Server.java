@@ -67,7 +67,6 @@ public class Server {
 		ParseBuilder pb = new ParseBuilder(in);
 		String username = pb.pass("USERNAME:").extract();
 		String randCookieStr = pb.pass("RAND_COOKIE:").extract();
-
 		int rand_cookie = Integer.parseInt(randCookieStr);
 		System.out.println("rand_cookie = " + rand_cookie);
 
@@ -103,3 +102,4 @@ public class Server {
 	
 	
 }
+//there should be a separate clas clienthandler. accepting incoming requests. once it receives requests then its going to connect

@@ -130,40 +130,52 @@ public class Client {
     }
 
     public static void main(String args[]) throws Exception {
-        // Establish client object
-        Client chatClient = new Client();
+        //To check input of terminal
+        Scanner in = new Scanner(System.in);
+        System.out.println("EXIT OR LOG ON");
+        String userIn = in.nextLine();
+        if (userIn.equalsIgnoreCase("EXIT")) {
+            System.exit(0);
+        } else if (userIn.equalsIgnoreCase("LOG ON")) {
+            System.out.println("logged in");
+            // Establish client object
+            Client chatClient = new Client();
 
-        // Try to connect
-        boolean connected = false;
-        do {
-            try {
-                // Attempt to connect to server
-                connected = chatClient.startConnection(serverIP, serverPort);
-            } catch (ConnectException e) {
-                // Connection failed
-                System.out.println("Could not connect to the server at IP address " + serverIP + " and port " + serverPort + ". Error returned:\n" + e.getMessage() + "\n");
+            // Try to connect
+            boolean connected = false;
+            do {
+                try {
+                    // Attempt to connect to server
+                    connected = chatClient.startConnection(serverIP, serverPort);
+                } catch (ConnectException e) {
+                    // Connection failed
+                    System.out.println("Could not connect to the server at IP address " + serverIP + " and port " + serverPort + ". Error returned:\n" + e.getMessage() + "\n");
 
-                // Ask if they'd like to try to connect again
-                System.out.print("Try to connect again? (Y/N):\n");
-                Scanner in = new Scanner(System.in);
-                String input = in.next();
+                    // Ask if they'd like to try to connect again
+                    System.out.print("Try to connect again? (Y/N):\n");
+//                    Scanner in = new Scanner(System.in);
+                    String input = in.next();
 
-                // Exit program if they don't want to connect again
-                if(input.charAt(0) == 'N' || input.charAt(0) == 'n') {
-                    System.exit(0);
+                    // Exit program if they don't want to connect again
+                    if (input.charAt(0) == 'N' || input.charAt(0) == 'n') {
+                        System.exit(0);
+                    }
                 }
-            }
-        } while(!connected);
+            } while (!connected);
 
-        // Connection succeeded
-        System.out.println("Successfully established connection to the server at IP address " + serverIP + " and port " + serverPort + ".");
+            // Connection succeeded
+            System.out.println("Successfully established connection to the server at IP address " + serverIP + " and port " + serverPort + ".");
 
-        //Allow the user to put in name of person they want to chat with
-        //create function call to chat with person
+            //Allow the user to put in name of person they want to chat with
+            System.out.println("Enter username: ");
+            String usernameDest = in.nextLine();
+
+            //create function call to chat with person
 
 
-        //connection has been made
+            //connection has been made
 
+        }
     }
 
 }
