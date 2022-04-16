@@ -1,24 +1,18 @@
-package org.teamnine.server.Authenticator;
+package org.teamnine.common;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
-public class Authenticator implements Runnable {
+public class Authenticator{
 	private int[] K_Alist;
 	private int[] randCookieList;
-	private DatagramSocket clientSocket;
-	private int rand;
-	
-	public Authenticator(int port) throws SocketException {
-		clientSocket = new DatagramSocket(port);
-		rand = (int) Math.floor(Math.random()*(9999-1000+1)+1000);
-	}
+
 	// public Authenticator(int port, String dbaddr)
 	
-	public void run() {
-		//Connect database to K_Alist
+	public static void run() {
+		int rand = (int) Math.floor(Math.random()*(9999-1000+1)+1000);
 		
 	}
 	
@@ -36,9 +30,9 @@ public class Authenticator implements Runnable {
 	
 	//Returns a MD5 hashed string, where the input string is 
 	//a randCookie and client K_A concatenated
-	public String A3(int rand, int K_A) {
+	public static String A3(int rand, String secretKey) {
 		try {  
-			String input = String.valueOf(rand) + String.valueOf(K_A);
+			String input = String.valueOf(rand) + secretKey;
 			
             // Static getInstance method is called with hashing MD5
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -67,9 +61,9 @@ public class Authenticator implements Runnable {
 	
 	//Returns a SHA1 hashed string, where the input string is 
 	//a randCookie and client K_A concatenated
-	public String A8(int rand, int K_A) {
+	public static String A8(int rand, String secretKey) {
 		try {
-			String input = String.valueOf(rand) + String.valueOf(K_A);
+			String input = String.valueOf(rand) + secretKey;
 			
 			MessageDigest digest = MessageDigest.getInstance("SHA-1");
 	        digest.reset();
@@ -87,20 +81,16 @@ public class Authenticator implements Runnable {
 	
 	
 	//Boolean function that compares a MD5 hash to some randCookie and K_A
-	public boolean A3match(String orig, int rand, int K_A){
-	String newComp = A3(rand, K_A);
+	public boolean A3match(String orig, int rand, String secretKey){
+	String newComp = A3(rand, secretKey);
 	if(orig.equals(newComp)) {return true;}
 	else {return false;}
 	}
 	
 	//Boolean function that compares a SHA1 hash to some randCookie and K_A
-	public boolean A8match(String orig, int rand, int K_A){
-		String newComp = A8(rand, K_A);
+	public boolean A8match(String orig, int rand, String secretKey){
+		String newComp = A8(rand, secretKey);
 		if(orig.equals(newComp)) {return true;}
 		else {return false;}
 		}
-	
-	public int getRandCookie() {
-		return rand;
-	}
 }
