@@ -1,19 +1,27 @@
 package org.teamnine.server;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Map;
 import java.util.Scanner;
-
-import org.teamnine.common.ParseBuilder;
+import org.teamnine.common.*;
 
 public class Server {
 	private ServerSocket serverSocket;
-	private Authenticator auth;
-	private Thread authThread;
+	private Socket clientSocket;
+	private PrintWriter out;
+	private Scanner in;
+	private ParseBuilder pb;
 
-	public Server(int udpPort, int tcpPort) {
-		serverSocket = new ServerSocket(tcpPort);
+
+	public Server(int udpPort, int tcpPort) throws IOException {
+		serverSocket = new ServerSocket(udpPort, tcpPort);
+		clientSocket = serverSocket.accept();
+		out = new PrintWriter(clientSocket.getOutputStream(), true);
+		in = new Scanner(clientSocket.getInputStream());
+		pb = new ParseBuilder(in);
 		// Start Authenticator
 		// this.auth = new Authenticator(udpPort);
 		// authThread = new Thread(new Authenticator(udpPort)
@@ -22,10 +30,7 @@ public class Server {
 	public void start(int port) throws Exception {
 		serverSocket = new ServerSocket(port);
 		while (true) {
-			clientSocket = serverSocket.accept();
-			out = new PrintWriter(clientSocket.getOutputStream(), true);
-			in = new Scanner(clientSocket.getInputStream());
-			pb = new ParseBuilder(in);
+			
 
 			String msgType;
 			msgType = pb.pass("START").pass("MSGTYPE:").extract();
@@ -37,6 +42,21 @@ public class Server {
 					throw new Exception("invalid msgType");
 			}
 		}
+	}
+	
+	public void handleHello(String Client_ID) {
+		//Search database for client ID
+		//If clientID exists, give secret key K_A to auth
+		int randCookie = (int) Math.floor(Math.random()*(9999-1000+1)+1000);
+		String testKey = "test123";
+		String XRES = Authenticator.A3(randCookie, testKey);
+		clientChallenges.put(Client_ID, XRES);
+		out.printf("START\nMSGTYPE: CHALLENGE\n" + XRES + "END\n");
+		
+	}
+
+	public void handleResponse() {
+		
 	}
 
 	public void stop() throws Exception {
@@ -54,24 +74,6 @@ public class Server {
 
 		int rand_cookie = Integer.parseInt(randCookieStr);
 		System.out.println("rand_cookie = " + rand_cookie);
-
-		boolean isSubbed = false;
-		for (String user : subbedUsers) {
-			if (username.equals(user)) {
-				isSubbed = true;
-				break;
-			}
-		}
-		
-		if (isSubbed) {
-			System.out.println("User " + username + " is valid.");
-			// Create ConnectionHandler for thread
-			connectedResponse();
-			// Add ConnectionHandler user key pait to hashmap
-		} else {
-			System.out.println("User " + username + " is NOT valid.");
-			stop();
-		}
 	}
 
 	private void connectedResponse() {
@@ -79,7 +81,7 @@ public class Server {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Server server = new Server();
+		Server server = new Server(3306, 6666);
 		try {
 			server.start(6666);
 		} finally {
