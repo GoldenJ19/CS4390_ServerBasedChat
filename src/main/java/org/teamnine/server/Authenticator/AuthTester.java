@@ -1,11 +1,17 @@
 package org.teamnine.server.Authenticator;
+import java.net.SocketException;
+
 import org.teamnine.server.Authenticator.*;
 public class AuthTester{
 
-public static void main(String[] args) {
+public static void main(String[] args) throws SocketException {
 	Authenticator auth = new Authenticator(3306);
-	String test1 = auth.hashMD5("test");
+	String test1 = auth.A3(auth.getRandCookie(), 777);
+	String test2 = auth.A8(auth.getRandCookie(), 777);
+	System.out.println(auth.getRandCookie());
 	System.out.println(test1);
-	System.out.println(auth.matching(test1, "test"));
+	System.out.println(test2);
+	System.out.println(auth.A3match(test1, auth.getRandCookie(), 777));
+	System.out.println(auth.A8match(test2, auth.getRandCookie(), 777));
 	}
 }
