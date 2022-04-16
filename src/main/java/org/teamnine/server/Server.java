@@ -9,58 +9,42 @@ import org.teamnine.common.ParseBuilder;
 
 public class Server {
 	private ServerSocket serverSocket;
-	private Socket clientSocket;
-	private PrintWriter out;
-	private Scanner in;
-	private ParseBuilder pb;	
+	private Authenticator auth;
+	private Thread authThread;
 
-	private String[] subbedUsers = {"AHAD", "GRANT"};
+	public Server(int udpPort, int tcpPort) {
+		serverSocket = new ServerSocket(tcpPort);
+		// Start Authenticator
+		// this.auth = new Authenticator(udpPort);
+		// authThread = new Thread(new Authenticator(udpPort)
+	}
 
 	public void start(int port) throws Exception {
 		serverSocket = new ServerSocket(port);
-		clientSocket = serverSocket.accept();
-		out = new PrintWriter(clientSocket.getOutputStream(), true);
-		in = new Scanner(clientSocket.getInputStream());
-		pb = new ParseBuilder(in);
+		while (true) {
+			clientSocket = serverSocket.accept();
+			out = new PrintWriter(clientSocket.getOutputStream(), true);
+			in = new Scanner(clientSocket.getInputStream());
+			pb = new ParseBuilder(in);
 
-		String msgType;
-		msgType = pb.pass("START").pass("MSGTYPE:").extract();
-		switch(msgType) {
-			case "CONNECT":
-				connectHandler();
-				break;
-			default:
-				throw new Exception("invalid msgType");
+			String msgType;
+			msgType = pb.pass("START").pass("MSGTYPE:").extract();
+			switch(msgType) {
+				case "CONNECT":
+					connectHandler();
+					break;
+				default:
+					throw new Exception("invalid msgType");
+			}
 		}
 	}
 
-	/*private String parseMsgType() throws Exception {
-		String msgType = "";
-		
-		if (in.nextLine().equals("START")) {
-			if (in.next().equals("MSGTYPE:")) {
-				msgType = in.next();
-				return msgType;
-			} else {
-				throw new Exception("couldn't find MSGTYPE after START line");
-			}
-		} else {
-			throw new Exception("message didn't start with START");
-		}
-	}*/
-
 	public void stop() throws Exception {
-		if (in != null)
-			in.close();
-		
-		if (out != null)
-			out.close();
-		
-		if (clientSocket != null)
-			clientSocket.close();
-		
 		if (serverSocket != null)
 			serverSocket.close();
+		
+		// auth.close();
+		// auth.join();
 	}
 	
 	private void connectHandler() throws Exception {
@@ -81,7 +65,9 @@ public class Server {
 		
 		if (isSubbed) {
 			System.out.println("User " + username + " is valid.");
+			// Create ConnectionHandler for thread
 			connectedResponse();
+			// Add ConnectionHandler user key pait to hashmap
 		} else {
 			System.out.println("User " + username + " is NOT valid.");
 			stop();
