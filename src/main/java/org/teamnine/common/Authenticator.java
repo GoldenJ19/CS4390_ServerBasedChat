@@ -8,13 +8,6 @@ import java.net.SocketException;
 public class Authenticator{
 	private int[] K_Alist;
 	private int[] randCookieList;
-
-	// public Authenticator(int port, String dbaddr)
-	
-	public static void run() {
-		int rand = (int) Math.floor(Math.random()*(9999-1000+1)+1000);
-		
-	}
 	
 	//Returns T/F depending on if a randCookie is in the list of known
 	//randCookies
