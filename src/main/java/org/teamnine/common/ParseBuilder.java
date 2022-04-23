@@ -1,5 +1,6 @@
 package org.teamnine.common;
 
+import java.io.IOException;
 import java.util.Scanner;
 
 public class ParseBuilder {
@@ -10,17 +11,21 @@ public class ParseBuilder {
 	}
 
 	// pass checks for symbol s without reading it.
-	public ParseBuilder pass(String s) throws Exception {
+	public ParseBuilder pass(String s) throws ParseException {
 		String next = scanner.next().trim();
 		if (!next.equals(s)) {
-			throw new Exception("expected '"+s+"' but got '"+next+"'.");
+			throw new ParseException(s, next);
 		}	
 
 		return this;
 	}
 
 	// extract returns the next string.
-	public String extract() throws Exception {
+	public String extract() throws IOException {
 		return scanner.next().trim();	
+	}
+
+	public void close() throws IOException {
+		scanner.close();
 	}
 }

@@ -1,9 +1,11 @@
 # Default ignored files
 /shelf/
-/.idea/workspace.xml
+.idea/
 *.class
 target/*
-/target/
+./target/
 .classpath
 .project
 .settings
+server.db
+*.swp
