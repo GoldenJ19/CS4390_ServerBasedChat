@@ -9,4 +9,3 @@ target/*
 .settings
 server.db
 *.swp
-/target/
