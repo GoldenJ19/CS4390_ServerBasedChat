@@ -53,7 +53,7 @@ public class ConnectionHandler implements Runnable {
 			Scanner in = new Scanner(connectSocket.getInputStream());
 			this.pb = new ParseBuilder(in);
 
-			// Handle connect - verify the rand cookie matches.
+			// Handle connect
 			try {
 				int clientRandCookie = initConnect();
 				if (clientRandCookie == randCookie) {
@@ -106,8 +106,9 @@ public class ConnectionHandler implements Runnable {
 		} catch (SocketException e) {
 			System.err.println("Connection error, exiting...");
 		} catch(InterruptedIOException | NoSuchElementException e) {
-			System.out.println("Interrupted, exiting...");
+			System.err.println("Interrupted, exiting...");
 		} catch (IOException e) {
+			// Usually happens on connection closed, so just exit.
 			System.err.println("FATAL: Encountered unexpected IOException, exiting");
 		} finally {
 			try {
@@ -118,7 +119,6 @@ public class ConnectionHandler implements Runnable {
 		}
 	}
 
-	// Interrupt shutdown the pipes in the socket and stops the handler.
 	public void interrupt() {
 		try {
 			if (connectSocket != null && !connectSocket.isClosed()) {
