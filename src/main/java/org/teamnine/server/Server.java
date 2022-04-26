@@ -9,7 +9,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public class Server {
-	private UDPHandler authHandler;
+	private DatagramSocket UDPsocket;
+	private DatagramPacket UDPmsg;
+	private byte[] received;
 	private ServerSocket serverSocket;
 	private Connection dbConn;
 	private ChatRoom chatRoom;
@@ -19,16 +21,51 @@ public class Server {
 		throws IOException, SQLException, ClassNotFoundException {
 
 		dbConn = DatabaseSetup.setupDatabase("server.db");
-
+		UDPsocket = new DatagramSocket(udpPort);
 		serverSocket = new ServerSocket(tcpPort);
 		chatRoom = new ChatRoom();
 	}
 
 	public void start() {
 		while (true) {
+			UDPHandler authHandler = new UDPHandler();
+			UDPmsg = new DatagramPacket(received, received.length);
+			
+			try {
+				UDPsocket.receive(UDPmsg);
+				int randCookie = authHandler.securityTest(received);
+				
+				//if user is subbed, send CHALLENGE with randcookie
+				if(randCookie > -1) {
+					received = new byte[10000];
+					received = authHandler.createChallengeMSG(randCookie);
+					UDPmsg = new DatagramPacket(received, received.length);
+					UDPsocket.send(UDPmsg);
+					
+					received = new byte[10000];
+					UDPmsg = new DatagramPacket(received, received.length);
+					UDPsocket.receive(UDPmsg);
+					boolean successfulLogin = UDPHandler.processResponse(received);
+					while(!successfulLogin) {
+						received = new byte[10000];
+						received = authHandler.createAuthMsg(successfulLogin, randCookie);
+						UDPmsg = new DatagramPacket(received, received.length);
+						UDPsocket.send(UDPmsg);	
+					}
+					received = new byte[10000];
+					//Note: Should pass TCP port as well
+					received = authHandler.createAuthMsg(successfulLogin, randCookie);
+					UDPmsg = new DatagramPacket(received, received.length);
+					UDPsocket.send(UDPmsg);
+				}
+			} catch (IOException badmsg) {
+				// TODO Auto-generated catch block
+				badmsg.printStackTrace();
+			}
+			
+			
 			Socket clientSocket;
 			ConnectionHandler clientHandler;
-			authHandler.securityTest();
 			
 			try {
 				clientSocket = serverSocket.accept();
@@ -42,6 +79,7 @@ public class Server {
 			try {
 				//int randCookie = clientHandler.initConnect();
 				// TODO: Verify randcookie here
+				
 				//chatRoom.registerUser(clientHandler);
 				System.out.println("Registered user, sending connected response");
 				//clientHandler.connectedResponse();
@@ -63,6 +101,9 @@ public class Server {
 
 		if (serverSocket != null)
 			serverSocket.close();
+		
+		if (UDPsocket != null)
+			UDPsocket.close();
 	}
 
 

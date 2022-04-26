@@ -74,7 +74,7 @@ public class ConnectionHandler implements Runnable {
 					String msgType = pb.pass("START").pass("MSGTYPE:").extract();
 					String sessionID;
 					switch (msgType) {
-						case "CHAT_REQUEST" -> {
+						case "CHAT_REQUEST": {
 							String clientb = pb.pass("CLIENTB:").extract();
 							pb.pass("END");
 							sessionID = chatRoom.chatRequest(this, clientb);
@@ -86,13 +86,13 @@ public class ConnectionHandler implements Runnable {
 								"END\n"
 							);
 						}
-						case "CHAT" -> {
+						case "CHAT": {
 							sessionID = pb.pass("SESSION_ID:").extract();
 							String msg = pb.pass("MESSAGE:").extract();
 							pb.pass("END");
 							chatRoom.sendChat(this, sessionID, msg);
 						}
-						default -> System.err.println("Invalid msgType '" + msgType + "'\n");
+						default: System.err.println("Invalid msgType '" + msgType + "'\n");
 					}
 				} catch (ParseException e) {
 					System.err.println("Bad message from client.");
