@@ -66,4 +66,24 @@ public class MockClient implements Closeable {
 		out.close();
 		in.close();
 	}
+
+	public void endRequest(String session_id) {
+		out.print(
+			"START\n"+
+			"MSGTYPE: END_REQUEST\n" +
+			"SESSION_ID: "+session_id+"\n"+
+			"END\n"
+		);
+		out.flush();
+	}
+
+	public void historyRequest(String clientb) {
+		out.print(
+			"START\n"+
+			"MSGTYPE: HISTORY_REQ\n"+
+			"CLIENTB: "+clientb+"\n"+
+			"END\n"
+		);
+		out.flush();
+	}
 }
