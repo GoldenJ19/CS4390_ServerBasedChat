@@ -23,7 +23,7 @@ public class Server {
 		dbConn = DatabaseSetup.setupDatabase("server.db");
 		UDPsocket = new DatagramSocket(udpPort);
 		serverSocket = new ServerSocket(tcpPort);
-		chatRoom = new ChatRoom();
+		chatRoom = new ChatRoom(dbConn);
 	}
 
 	public void start() {

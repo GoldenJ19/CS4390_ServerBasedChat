@@ -7,6 +7,10 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.net.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -19,11 +23,12 @@ public class ConnectionHandler implements Runnable {
 	private String username;
 	private final int randCookie;
 	private boolean running = true;
-	
-	public ConnectionHandler(ChatRoom chatRoom, int portNum, int randCookie) throws IOException {
+	private Connection dbConn;
+
+	public ConnectionHandler(ChatRoom chatRoom, int portNum, int randCookie, Connection dbConn) throws IOException {
 		this.chatRoom = chatRoom;
 		this.randCookie = randCookie;
-
+		this.dbConn = dbConn;
 		// Bind and connect client socket to port number:
 		serverSocket = new ServerSocket();
 		SocketAddress address = new InetSocketAddress("localhost", portNum);
@@ -53,7 +58,7 @@ public class ConnectionHandler implements Runnable {
 			Scanner in = new Scanner(connectSocket.getInputStream());
 			this.pb = new ParseBuilder(in);
 
-			// Handle connect
+			// Handle connect - verify the rand cookie matches.
 			try {
 				int clientRandCookie = initConnect();
 				if (clientRandCookie == randCookie) {
@@ -70,45 +75,55 @@ public class ConnectionHandler implements Runnable {
 
 			// Handle other methods
 			while (running) {
+				String clientb = null;
 				try {
 					String msgType = pb.pass("START").pass("MSGTYPE:").extract();
-					String sessionID;
+					String sessionID = null;
 					switch (msgType) {
-						case "CHAT_REQUEST": {
-							String clientb = pb.pass("CLIENTB:").extract();
+						case "CHAT_REQUEST" -> {
+							clientb = pb.pass("CLIENTB:").extract();
 							pb.pass("END");
 							sessionID = chatRoom.chatRequest(this, clientb);
 							out.print(
-								"START\n" +
-								"MSGTYPE: CHAT_STARTED\n" +
-								"SESSION_ID: " + sessionID + "\n" +
-								"CLIENTB:" + clientb + "\n" +
-								"END\n"
+									"START\n" +
+									"MSGTYPE: CHAT_STARTED\n" +
+									"SESSION_ID: " + sessionID + "\n" +
+									"CLIENTB: " + clientb + "\n" +
+									"END\n"
 							);
+							out.flush();
 						}
-						case "CHAT": {
+						case "CHAT" -> {
 							sessionID = pb.pass("SESSION_ID:").extract();
 							String msg = pb.pass("MESSAGE:").extract();
 							pb.pass("END");
 							chatRoom.sendChat(this, sessionID, msg);
 						}
-						default: System.err.println("Invalid msgType '" + msgType + "'\n");
+						case "END_REQUEST" -> {
+							sessionID = pb.pass("SESSION_ID:").extract();
+							pb.pass("END");
+							chatRoom.endSession(sessionID);
+						}
+						case "HISTORY_REQ" -> {
+							clientb = pb.pass("CLIENTB:").extract();
+							pb.pass("END");
+							historyResponse(clientb);
+						}
+						default -> System.err.println("Invalid msgType '" + msgType + "'\n");
 					}
 				} catch (ParseException e) {
 					System.err.println("Bad message from client.");
 					System.err.println(e.getMessage());
 					clientErrorResponse(e.getMessage());
 				} catch (ChatRoomException e) {
-					System.err.println("Couldn't communicate with other client");
-					clientErrorResponse(e.getMessage());
+					unreachable(clientb);
 				}
 			}
 		} catch (SocketException e) {
 			System.err.println("Connection error, exiting...");
 		} catch(InterruptedIOException | NoSuchElementException e) {
-			System.err.println("Interrupted, exiting...");
+			System.out.println("Interrupted, exiting...");
 		} catch (IOException e) {
-			// Usually happens on connection closed, so just exit.
 			System.err.println("FATAL: Encountered unexpected IOException, exiting");
 		} finally {
 			try {
@@ -119,6 +134,30 @@ public class ConnectionHandler implements Runnable {
 		}
 	}
 
+	private void historyResponse(String clientb) {
+		String sql = "SELECT clientFrom, clientTo, message FROM chat_log WHERE clientFrom = ? OR clientTo = ?;";
+		try(PreparedStatement stmt = dbConn.prepareStatement(sql)){
+			stmt.setString(1, username);
+			stmt.setString(2, clientb);
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				out.print(
+					"START\n"+
+					"MSGTYPE: HISTORY_RESP\n"+
+					"SENDER: "+rs.getString(1)+"\n"+
+					"MESSAGE: "+rs.getString(3)+"\n"+
+					"END\n"
+				);
+				out.flush();
+			}
+		} catch (SQLException e) {
+			System.err.println("Fatal sql exception");
+			e.printStackTrace();
+			throw new RuntimeException();
+		}
+	}
+
+	// Interrupt shutdown the pipes in the socket and stops the handler.
 	public void interrupt() {
 		try {
 			if (connectSocket != null && !connectSocket.isClosed()) {
@@ -131,6 +170,16 @@ public class ConnectionHandler implements Runnable {
 			e.printStackTrace();
 		}
 		running = false;
+	}
+
+	public void unreachable(String clientb) {
+		out.print(
+			"START\n" +
+			"MSGTYPE: UNREACHABLE\n" +
+			"CLIENTB: "+clientb+"\n" +
+			"END\n"
+		);
+		out.flush();
 	}
 
 	public void sendChat(String sessionID, String msg) {
@@ -159,6 +208,7 @@ public class ConnectionHandler implements Runnable {
 		out.print(
 			"START\n"+
 			"MSGTYPE: END_NOTIF\n"+
+			"SESSION_ID: "+sessionID+"\n"+
 			"END\n"
 		);
 		out.flush();

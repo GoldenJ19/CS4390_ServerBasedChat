@@ -1,6 +1,9 @@
 package org.teamnine.server;
 
 import java.io.Closeable;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,6 +12,10 @@ public class ChatRoom implements Closeable {
 	private final ConcurrentHashMap<String, ConnectionHandler> connectedUsers = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, ConnectionHandler> busyUsers = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
+	private Connection dbConn;
+	public ChatRoom(Connection dbConn) {
+		this.dbConn = dbConn;
+	}
 
 	private static class Session {
 		private final ConnectionHandler clienta;
@@ -24,11 +31,27 @@ public class ChatRoom implements Closeable {
 			this.sessionID = Base64.getEncoder().encodeToString(sessionIDBytes);
 		}
 
-		public synchronized void sendChat(ConnectionHandler from, String sessionID, String msg) {
+		public synchronized void sendChat(ConnectionHandler from, String sessionID, String msg, Connection dbConn) {
+			ConnectionHandler to;
 			if (from == clienta) {
 				clientb.sendChat(sessionID, msg);
+				to = clientb;
 			} else {
 				clienta.sendChat(sessionID, msg);
+				to = clienta;
+			}
+
+			// Insert chat into database
+			String sql = "INSERT INTO chat_log VALUES(?, ?, ?, ?);";
+			try (PreparedStatement stmt = dbConn.prepareStatement(sql)) {
+				stmt.setString(1, from.getUsername());
+				stmt.setString(2, to.getUsername());
+				stmt.setString(3, sessionID);
+				stmt.setString(4, msg);
+				stmt.execute();
+			} catch (SQLException e) {
+				System.err.println("FATAL: sql error");
+				throw new RuntimeException(e);
 			}
 		}
 
@@ -60,9 +83,9 @@ public class ChatRoom implements Closeable {
 		var clientbHandler = connectedUsers.get(clientb);
 
 		var session = new Session(clientaHandler, clientbHandler);
-		sessions.put(session.getSessionID(), new Session(clientaHandler, clientbHandler));
+		sessions.put(session.getSessionID(), session);
 
-		clientbHandler.chatStarted(session.getSessionID(), clientb);
+		clientbHandler.chatStarted(session.getSessionID(), clientaHandler.getUsername());
 
 		busyUsers.put(clientaHandler.getUsername(), clientaHandler);
 		busyUsers.put(clientbHandler.getUsername(), clientbHandler);
@@ -76,7 +99,15 @@ public class ChatRoom implements Closeable {
 		if (session == null)
 			throw new ChatRoomException("Session "+sessionID+" doesn't exist.");
 
-		session.sendChat(from, sessionID, msg);
+		session.sendChat(from, sessionID, msg, dbConn);
+	}
+
+	public synchronized void endSession(String sessionID) throws ChatRoomException {
+		var session = sessions.get(sessionID);
+		if (session == null)
+			throw new ChatRoomException("Session "+sessionID+" doesn't exist.");
+
+		session.end();
 	}
 
 	public void close() {

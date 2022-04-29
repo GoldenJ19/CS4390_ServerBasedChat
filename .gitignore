@@ -9,3 +9,5 @@ target/*
 .settings
 server.db
 *.swp
+testserver.db
+*.iml
