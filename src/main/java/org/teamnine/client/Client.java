@@ -6,28 +6,31 @@
 package org.teamnine.client;
 
 import java.io.PrintWriter;
+import java.io.IOException;
 import java.net.ConnectException;
+import java.net.DatagramSocket;
+import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.text.NumberFormat;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.Formatter;
 import java.util.ArrayList;
 
 import org.teamnine.common.ParseBuilder;
+import org.teamnine.server.UDPHandler;
 
 public class Client implements ClientRunnable {
-    private Socket clientSocket;
-    private PrintWriter socket_out;
-    private Scanner socket_in;
+    private DatagramSocket udpClientSocket;
+    private DatagramPacket udpClientMessage;
+    private Socket tcpClientSocket;
+    private PrintWriter tcp_socket_out;
+    private Scanner tcp_socket_in;
     private Random randomGen;
     private ParseBuilder pb;
-    private int seshID = -1;
-    private static final int serverPort_welcoming = 6666;
+    private int seshID = -1, serverPort = -1, rand_cookie = -1;;
+    private static final int serverPort_welcoming = 1234;
     private static final String serverIP = "127.0.0.1", messageFormat = "%16s:\t%s\n", command_connect = "CONNECT", command_exitapp = "EXIT", command_logoff = "LOG OFF",
     _separator = "----------------------------------------------";
-    private int serverPort = -1;
-    private int rand_cookie = -1;
     private String loggedInUsername = null, chattingWith = null;
     private ArrayList<String> messageHistory;
     private static Thread mainThread = null, inputThread = null;
@@ -40,24 +43,27 @@ public class Client implements ClientRunnable {
         String username = console.nextLine().trim();
         System.out.println();
 
+        System.out.print("Enter password\n>");
+        String password = console.nextLine().trim();
+        System.out.println();
+
         String[] response = null;
         int tries = 5;
         do {
-            // Create socket to server
-            clientSocket = new Socket(ip, port);
-            socket_out = new PrintWriter(clientSocket.getOutputStream(), true);
-            socket_in = new Scanner(clientSocket.getInputStream());
+            // Create udp socket to server
+            udpClientSocket = new DatagramSocket(port);
+            udpClientSocket.connect(new InetSocketAddress(ip, port));
             randomGen = new Random();
-            pb = new ParseBuilder(socket_in);
 
             // Send connect request to server
-            socket_out.println("START\n" +
+            String helloMessage = "START\n" +
                     "MSGTYPE: HELLO\n" +
                     "USERNAME: " + username + "\n" +
-                    "END");
+                    "END";
+            sendUDPMessage(helloMessage);
 
             // Receive response
-            response = receiveMessage();
+            response = receiveUDPMessage();
 
             // Validate response... should be CHALLENGE, otherwise AUTH_FAIL
             if( response != null && response[0].equals("CHALLENGE") ) {
@@ -66,16 +72,17 @@ public class Client implements ClientRunnable {
                 int rand = Integer.parseInt(response[1]);
 
                 // Use rand to generate RES
-                String RES = org.teamnine.common.Authenticator.A3(rand, username); // use username as secret key just for now
+                String RES = org.teamnine.common.Authenticator.A3(rand, password); // use username as secret key just for now
 
                 // Send response to server
-                socket_out.println("START\n" +
+                String responseMessage = "START\n" +
                         "MSGTYPE: RESPONSE\n" +
                         "RES: " + RES + "\n" +
-                        "END");
+                        "END";
+                sendUDPMessage(responseMessage);
 
                 // Receive response to response
-                response = receiveMessage();
+                response = receiveUDPMessage();
 
                 // Validate response... should be AUTH_SUCCESS, otherwise AUTH_FAIL
                 if( response != null && response[0].equals("AUTH_SUCCESS") ) {
@@ -86,7 +93,8 @@ public class Client implements ClientRunnable {
                     return true;
                 }
                 else if ( response != null && response[0].equals("AUTH_FAIL") ) {
-                    System.out.println("ERROR: Server returned AUTH_FAIL when attempting to authenticate.");
+                    System.out.println("ERROR: Failed to authenticate with server. Password is incorrect.");
+                    break;
                 }
                 else {
                     System.out.println("ERROR: Server returned unexpected message when attempting to authenticate.");
@@ -109,22 +117,20 @@ public class Client implements ClientRunnable {
         int tries = 5;
         do {
             // Create socket to server
-            clientSocket = new Socket(ip, port);
-            socket_out.close();
-            socket_out = new PrintWriter(clientSocket.getOutputStream(), true);
-            socket_in.close();
-            socket_in = new Scanner(clientSocket.getInputStream());
-            pb = new ParseBuilder(socket_in);
+            tcpClientSocket = new Socket(ip, port);
+            tcp_socket_out = new PrintWriter(tcpClientSocket.getOutputStream(), true);
+            tcp_socket_in = new Scanner(tcpClientSocket.getInputStream());
+            pb = new ParseBuilder(tcp_socket_in);
 
             // Send connect request to server
-            socket_out.println("START\n" +
+            tcp_socket_out.println("START\n" +
                     "MSGTYPE: CONNECT\n" +
                     "USERNAME: " + loggedInUsername + "\n" +
                     "RAND_COOKIE: " + rand_cookie + "\n" +
                     "END");
 
             // Receive response
-            response = receiveMessage();
+            response = receiveTCPMessage();
 
             // Validate response... should be CONNECTED, otherwise AUTH_FAIL
             if( response != null && response[0].equals("CONNECTED") ) {
@@ -142,12 +148,12 @@ public class Client implements ClientRunnable {
     }
 
     public boolean startChat( String clientB ) throws Exception {
-        if( clientSocket.isConnected() ) {
+        if( tcpClientSocket.isConnected() ) {
             // Send chat request to server
             //String[] response = null;
 
             // Send connect request to server
-            socket_out.println("START\n" +
+            tcp_socket_out.println("START\n" +
                     "MSGTYPE: CHAT_REQUEST\n" +
                     "CLIENTB: " + clientB + "\n" +
                     "END");
@@ -174,12 +180,12 @@ public class Client implements ClientRunnable {
     }
 
     public boolean sendChat( String message ) throws Exception {
-        if( clientSocket.isConnected() ) {
+        if( tcpClientSocket.isConnected() ) {
             // Send chat request to server
             //String[] response = null;
 
             // Send connect request to server
-            socket_out.println("START\n" +
+            tcp_socket_out.println("START\n" +
                     "MSGTYPE: CHAT\n" +
                     "SESSION_ID: " + seshID + "\n" +
                     "CHAT_MESSAGE: " + message + "\n" +
@@ -216,12 +222,12 @@ public class Client implements ClientRunnable {
 
     public boolean endChat() throws Exception {
         // Check if we're actually connected to something
-        if( clientSocket.isConnected() ) {
+        if( tcpClientSocket.isConnected() ) {
             // Send chat request to server
             //String[] response = null;
 
             // Send connect request to server
-            socket_out.println("START\n" +
+            tcp_socket_out.println("START\n" +
                     "MSGTYPE: END_REQUEST\n" +
                     "SESSION_ID: " + seshID + "\n" +
                     "END");
@@ -250,12 +256,12 @@ public class Client implements ClientRunnable {
     }
 
     public boolean getMessageHistory( String clientB ) throws Exception {
-        if( clientSocket.isConnected() ) {
+        if( tcpClientSocket.isConnected() ) {
             // Send chat request to server
             //String[] response = null;
 
             // Send connect request to server
-            socket_out.println("START\n" +
+            tcp_socket_out.println("START\n" +
                     "MSGTYPE: HISTORY_REQ\n" +
                     "CLIENTB: " + clientB + "\n" +
                     "END");
@@ -286,19 +292,41 @@ public class Client implements ClientRunnable {
     }
 
     public void stopConnection() throws Exception {
-        socket_in.close();
-        socket_out.close();
-        clientSocket.close();
+        tcp_socket_in.close();
+        tcp_socket_out.close();
+        tcpClientSocket.close();
         seshID = -1;
     }
 
-    public String[] receiveMessage() throws Exception {
+    public void sendUDPMessage( String message ) throws IOException {
+        udpClientMessage = new DatagramPacket(message.getBytes(), message.length());
+        udpClientSocket.send(udpClientMessage);
+    }
+
+    public String[] receiveUDPMessage() throws Exception {
+        // Receive message from UDP socket
+        udpClientSocket.receive(udpClientMessage);
+
+        // Get message from the packet
+        byte[] response = udpClientMessage.getData();
+        String message = UDPHandler.data(response);
+
+        // Get message
+        tcp_socket_in = new Scanner(message);
+
+        String[] toReturn = receiveTCPMessage();
+        tcp_socket_in.close();
+
+        return toReturn;
+    }
+
+    public String[] receiveTCPMessage() throws Exception {
         // Create info variables
         int seshID = -1, rand = -1, rand_cookie = -1, port_number = -1;
         String msgType = null, clientB = null, message = null;
 
         // Receive response from server
-        if( socket_in.hasNext() ) {
+        if( tcp_socket_in.hasNext() ) {
             // Parse through message
             /// Extract message type
             msgType = pb.pass("START").pass("MSGTYPE:").extract();
@@ -573,7 +601,7 @@ public class Client implements ClientRunnable {
             // Connect to socket made by server for this client
             int tries = 5;
             connected = false;
-            chatClient.clientSocket.close();
+            chatClient.tcpClientSocket.close();
             do {
                 try {
                     connected = chatClient.startConnection(serverIP, chatClient.serverPort);
@@ -682,7 +710,7 @@ public class Client implements ClientRunnable {
         // Listen while this thread is active
         while(true) {
             // Listen for server response
-            String[] response = receiveMessage();
+            String[] response = receiveTCPMessage();
 
             // Check session id, if -1 we know we're not in a chat right now.
             if(response != null) {

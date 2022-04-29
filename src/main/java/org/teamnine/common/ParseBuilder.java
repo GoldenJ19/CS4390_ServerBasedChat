@@ -2,6 +2,7 @@ package org.teamnine.common;
 
 import java.io.IOException;
 import java.util.Scanner;
+import org.teamnine.common.ParseException;
 
 public class ParseBuilder {
 	Scanner scanner;

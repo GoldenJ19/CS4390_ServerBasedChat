@@ -24,6 +24,7 @@ public class Server {
 		UDPsocket = new DatagramSocket(udpPort);
 		serverSocket = new ServerSocket(tcpPort);
 		chatRoom = new ChatRoom(dbConn);
+		received = new byte[]{};
 	}
 
 	public void start() {
