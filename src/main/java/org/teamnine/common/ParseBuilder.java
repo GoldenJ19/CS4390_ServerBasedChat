@@ -28,4 +28,9 @@ public class ParseBuilder {
 	public void close() throws IOException {
 		scanner.close();
 	}
+
+	// extract returns the next string.
+	public String extractLine() throws Exception {
+		return scanner.nextLine().trim();
+	}
 }
