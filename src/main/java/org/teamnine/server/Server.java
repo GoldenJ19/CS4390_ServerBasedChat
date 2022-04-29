@@ -17,7 +17,7 @@ public class Server {
 
 		dbConn = DatabaseSetup.setupDatabase("server.db");	
 		serverSocket = new ServerSocket(tcpPort);
-		chatRoom = new ChatRoom();
+		chatRoom = new ChatRoom(dbConn);
 	}
 
 	public void start() {
