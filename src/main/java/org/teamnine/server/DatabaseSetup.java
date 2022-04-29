@@ -49,23 +49,24 @@ public class DatabaseSetup {
 					message			TEXT	NOT NULL
 				);
 				""";
-		runSQL("INSERT INTO USERS VALUES(0, ahad, testpass1);");
-		runSQL("INSERT INTO USERS VALUES(1, grant, testpass2);");
-		runSQL("INSERT INTO USERS VALUES(2, justin, testpass3);");
-		runSQL("INSERT INTO USERS VALUES(3, rumsha, testpass4);");
-		
+
 		stmt.executeUpdate(createChatLogTableSQL);
 		stmt.close();
+		runSQL("INSERT INTO USERS(id,name,skey) VALUES(0, 'ahad', 'testpass1');", c);
+		runSQL("INSERT INTO USERS(id,name,skey) VALUES(1, 'grant', 'testpass2');", c);
+		runSQL("INSERT INTO USERS(id,name,skey) VALUES(2, 'justin', 'testpass3');", c);
+		runSQL("INSERT INTO USERS(id,name,skey) VALUES(3, 'rumsha', 'testpass4');", c);
 		
+
 		return c;
 	}
 	
-	public void runSQL(String sql, Connection dbConn) {
+	public static void runSQL(String sql, Connection dbConn) {
 		try (PreparedStatement stmt = dbConn.prepareStatement(sql)) {
 			stmt.execute();
 		} catch (SQLException e) {
 			System.err.println("FATAL: sql error");
-			throw new RuntimeException(e);
+			e.printStackTrace();
 		}
 	}
 	

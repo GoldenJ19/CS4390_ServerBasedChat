@@ -95,7 +95,7 @@ public class ConnectionHandler implements Runnable {
 						}
 						case "CHAT" -> {
 							sessionID = pb.pass("SESSION_ID:").extract();
-							String msg = pb.pass("MESSAGE:").extract();
+							String msg = pb.pass("MESSAGE:").extractLine();
 							pb.pass("END");
 							chatRoom.sendChat(this, sessionID, msg);
 						}

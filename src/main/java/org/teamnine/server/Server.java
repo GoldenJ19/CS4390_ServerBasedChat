@@ -3,96 +3,78 @@ package org.teamnine.server;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Server {
 	private DatagramSocket UDPsocket;
 	private DatagramPacket UDPmsg;
 	private byte[] received;
-	private ServerSocket serverSocket;
 	private Connection dbConn;
 	private ChatRoom chatRoom;
-	private Thread chatRoomThread;
-
+	private Map<ConnectionHandler, Thread> connections = new HashMap<>();
+	private int tcpPort;
 	public Server(int udpPort, int tcpPort) 
 		throws IOException, SQLException, ClassNotFoundException {
 
 		dbConn = DatabaseSetup.setupDatabase("server.db");
 		UDPsocket = new DatagramSocket(udpPort);
-		serverSocket = new ServerSocket(tcpPort);
 		chatRoom = new ChatRoom(dbConn);
 		received = new byte[]{};
+		this.tcpPort = tcpPort;
 	}
 
-	public void start() {
+	public void start() throws Exception {
 		while (true) {
-			UDPHandler authHandler = new UDPHandler();
+			UDPHandler authHandler = new UDPHandler(dbConn);
+			received = new byte[10000];
 			UDPmsg = new DatagramPacket(received, received.length);
-			
+
 			try {
 				UDPsocket.receive(UDPmsg);
-				int randCookie = authHandler.securityTest(received);
-				
+				received = UDPmsg.getData();
+				int randCookie = authHandler.handleHello(UDPmsg.getData());
+
 				//if user is subbed, send CHALLENGE with randcookie
-				if(randCookie > -1) {
+				if (randCookie > -1) {
 					received = new byte[10000];
 					received = authHandler.createChallengeMSG(randCookie);
-					UDPmsg = new DatagramPacket(received, received.length);
+					UDPmsg = new DatagramPacket(received, received.length, UDPmsg.getAddress(), UDPmsg.getPort());
 					UDPsocket.send(UDPmsg);
-					
+
 					received = new byte[10000];
 					UDPmsg = new DatagramPacket(received, received.length);
 					UDPsocket.receive(UDPmsg);
-					boolean successfulLogin = UDPHandler.processResponse(received);
-					while(!successfulLogin) {
+					boolean successfulLogin = authHandler.processResponse(received);
+
+					// Bound check tcp port
+					while (!successfulLogin) {
 						received = new byte[10000];
-						received = authHandler.createAuthMsg(successfulLogin, randCookie);
-						UDPmsg = new DatagramPacket(received, received.length);
-						UDPsocket.send(UDPmsg);	
+						received = authHandler.createAuthMsg(false, randCookie, 0);
+						UDPmsg = new DatagramPacket(received, received.length, UDPmsg.getAddress(), UDPmsg.getPort());
+						UDPsocket.send(UDPmsg);
+						successfulLogin = authHandler.processResponse(received);
 					}
+					// connection handler
+					int chTCPPort = tcpPort++;
+					ConnectionHandler ch = new ConnectionHandler(chatRoom, chTCPPort, randCookie, dbConn);
+					Thread thread = new Thread(ch);
+					thread.start();
+					connections.put(ch, thread);
 					received = new byte[10000];
 					//Note: Should pass TCP port as well
-					received = authHandler.createAuthMsg(successfulLogin, randCookie);
-					UDPmsg = new DatagramPacket(received, received.length);
+					received = authHandler.createAuthMsg(true, randCookie, chTCPPort);
+					UDPmsg = new DatagramPacket(received, received.length, UDPmsg.getAddress(), UDPmsg.getPort());
 					UDPsocket.send(UDPmsg);
 				}
 			} catch (IOException badmsg) {
 				// TODO Auto-generated catch block
 				badmsg.printStackTrace();
 			}
-			
-			
-			Socket clientSocket;
-			ConnectionHandler clientHandler;
-			
-			try {
-				clientSocket = serverSocket.accept();
-				//clientHandler = new ConnectionHandler(chatRoom, clientSocket);
-			} catch (IOException e) {
-				System.out.println("Unexpected IOException when accepting TCP connection");
-				e.printStackTrace();
-				return;
-			}
-
-			try {
-				//int randCookie = clientHandler.initConnect();
-				// TODO: Verify randcookie here
-				
-				//chatRoom.registerUser(clientHandler);
-				System.out.println("Registered user, sending connected response");
-				//clientHandler.connectedResponse();
-				//new Thread(clientHandler);
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.err.println("Could not handle client connection.");
-				return;
-			}
 		}
 	}
-
 	public void close() throws Exception {
 		if (dbConn != null)
 			dbConn.close();
@@ -100,11 +82,13 @@ public class Server {
 		if (chatRoom != null)
 			chatRoom.close();
 
-		if (serverSocket != null)
-			serverSocket.close();
-		
 		if (UDPsocket != null)
 			UDPsocket.close();
+
+		for (Map.Entry<ConnectionHandler, Thread> e : connections.entrySet()) {
+			e.getKey().interrupt();
+			e.getValue().join();
+		}
 	}
 
 

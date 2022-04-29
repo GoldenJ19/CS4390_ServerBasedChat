@@ -1,13 +1,13 @@
 package org.teamnine.client;
 
+import org.teamnine.common.Authenticator;
+import org.teamnine.common.ParseBuilder;
+
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
 import java.util.ArrayList;
-
-import org.teamnine.common.Authenticator;
-import org.teamnine.common.ParseBuilder;
+import java.util.Scanner;
 
 public class MockServer implements ClientRunnable {
     private ServerSocket serverSocket;
@@ -227,7 +227,7 @@ public class MockServer implements ClientRunnable {
     }
 
     private void authChallengeResponse( int random ) {
-        out.printf("START\nMSGTYPE: CHALLENGE\nRAND: " + random + "\nEND\n");
+        out.printf("START\nMSGTYPE: CHALLENGE\nRAND_COOKIE: " + random + "\nEND\n");
     }
 
     private void authSuccessResponse( int port ) throws Exception {

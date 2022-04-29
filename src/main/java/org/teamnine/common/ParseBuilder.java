@@ -2,7 +2,6 @@ package org.teamnine.common;
 
 import java.io.IOException;
 import java.util.Scanner;
-import org.teamnine.common.ParseException;
 
 public class ParseBuilder {
 	Scanner scanner;
@@ -31,7 +30,7 @@ public class ParseBuilder {
 	}
 
 	// extract returns the next string.
-	public String extractLine() throws Exception {
+	public String extractLine() throws IOException {
 		return scanner.nextLine().trim();
 	}
 }
