@@ -1,9 +1,12 @@
 package org.teamnine.common;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.net.DatagramSocket;
-import java.net.SocketException;
 
 public class Authenticator{
 	private int[] K_Alist;
@@ -54,22 +57,31 @@ public class Authenticator{
 	
 	//Returns a SHA1 hashed string, where the input string is 
 	//a randCookie and client K_A concatenated
-	public static String A8(int rand, String secretKey) {
+	public static byte[] A8(int rand, String secretKey) {
 		try {
-			String input = String.valueOf(rand) + secretKey;
-			
-			MessageDigest digest = MessageDigest.getInstance("SHA-1");
+			String concat = rand + secretKey;
+			byte[] key = concat.getBytes(StandardCharsets.UTF_8);
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 	        digest.reset();
-	        digest.update(input.getBytes());
-	        String hashtext = String.format("%040x", new BigInteger(1, digest.digest()));
-	        
-	        return hashtext;
+	        digest.update(key);
+
+	        return digest.digest();
 		} 
 		
 		catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
-        }	
-		
+		}
+	}
+
+	// opmode should be Cipher.ENCRYPT_MODE or Cipher.DECRYPT_MODE
+	public static Cipher getCipher(int opmode, int rand, String secretKey) throws Exception {
+		final String algorithm = "AES/ECB/PKCS5Padding";
+		Cipher cipher = Cipher.getInstance(algorithm);
+		byte[] secret = A8(rand, secretKey);
+		SecretKey skey = new SecretKeySpec(secret, "AES");
+		cipher.init(opmode, skey);
+
+		return cipher;
 	}
 	
 	
@@ -79,11 +91,4 @@ public class Authenticator{
 	if(orig.equals(newComp)) {return true;}
 	else {return false;}
 	}
-	
-	//Boolean function that compares a SHA1 hash to some randCookie and K_A
-	public boolean A8match(String orig, int rand, String secretKey){
-		String newComp = A8(rand, secretKey);
-		if(orig.equals(newComp)) {return true;}
-		else {return false;}
-		}
 }

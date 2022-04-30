@@ -2,7 +2,11 @@ package org.teamnine.server;
 
 import org.teamnine.common.ParseBuilder;
 import org.teamnine.common.ParseException;
+import org.teamnine.common.Authenticator;
+import org.teamnine.common.CipherOutputStream;
 
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
@@ -24,11 +28,13 @@ public class ConnectionHandler implements Runnable {
 	private final int randCookie;
 	private boolean running = true;
 	private Connection dbConn;
+	private String secretKey;
 
-	public ConnectionHandler(ChatRoom chatRoom, int portNum, int randCookie, Connection dbConn) throws IOException {
+	public ConnectionHandler(ChatRoom chatRoom, int portNum, int randCookie, Connection dbConn, String secretKey) throws IOException {
 		this.chatRoom = chatRoom;
 		this.randCookie = randCookie;
 		this.dbConn = dbConn;
+		this.secretKey = secretKey;
 		// Bind and connect client socket to port number:
 		serverSocket = new ServerSocket();
 		SocketAddress address = new InetSocketAddress("localhost", portNum);
@@ -54,8 +60,16 @@ public class ConnectionHandler implements Runnable {
 		// accept connection and setup writers and readers.
 		try {
 			connectSocket = serverSocket.accept();
-			this.out = new PrintWriter(connectSocket.getOutputStream());
-			Scanner in = new Scanner(connectSocket.getInputStream());
+			CipherInputStream cipherInput = new CipherInputStream(
+					connectSocket.getInputStream(),
+					Authenticator.getCipher(Cipher.DECRYPT_MODE, randCookie, secretKey)
+			);
+			CipherOutputStream cipherOutput = new CipherOutputStream(
+					connectSocket.getOutputStream(),
+					Authenticator.getCipher(Cipher.ENCRYPT_MODE, randCookie, secretKey)
+			);
+			this.out = new PrintWriter(cipherOutput, true);
+			Scanner in = new Scanner(cipherInput);
 			this.pb = new ParseBuilder(in);
 
 			// Handle connect - verify the rand cookie matches.
@@ -64,6 +78,7 @@ public class ConnectionHandler implements Runnable {
 				if (clientRandCookie == randCookie) {
 					chatRoom.registerUser(this);
 					connectedResponse();
+					cipherOutput.flush();
 				} else {
 					authFailResponse("incorrect rand cookie");
 				}
@@ -123,8 +138,8 @@ public class ConnectionHandler implements Runnable {
 			System.err.println("Connection error, exiting...");
 		} catch(InterruptedIOException | NoSuchElementException e) {
 			System.out.println("Interrupted, exiting...");
-		} catch (IOException e) {
-			System.err.println("FATAL: Encountered unexpected IOException, exiting");
+		} catch (Exception e) {
+			System.err.println("FATAL: Encountered unexpected Exception, exiting");
 		} finally {
 			try {
 				close();
@@ -177,7 +192,7 @@ public class ConnectionHandler implements Runnable {
 			"START\n" +
 			"MSGTYPE: UNREACHABLE\n" +
 			"CLIENTB: "+clientb+"\n" +
-			"END\n"
+			"END"
 		);
 		out.flush();
 	}
@@ -215,10 +230,10 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private void connectedResponse() {
-		out.print(
+		out.println(
 			"START\n" +
 			"MSGTYPE: CONNECTED\n" +
-			"END\n"
+			"END"
 		);
 		out.flush();
 	}

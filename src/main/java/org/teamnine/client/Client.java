@@ -5,12 +5,17 @@
  */
 package org.teamnine.client;
 
+import org.teamnine.common.Authenticator;
 import org.teamnine.common.ParseBuilder;
 import org.teamnine.server.UDPHandler;
+import org.teamnine.common.CipherOutputStream;
 
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
@@ -32,7 +37,7 @@ public class Client implements ClientRunnable {
 	private ArrayList<String> messageHistory;
 	private static Thread mainThread = null, inputThread = null;
 	private static String receivedInput = null;
-
+	private static String password = null;
 	public boolean contactServerWelcomingSocket(String ip, int port) throws Exception {
 		// Login
 		Scanner console = new Scanner(System.in);
@@ -41,7 +46,7 @@ public class Client implements ClientRunnable {
 		System.out.println();
 
 		System.out.print("Enter password\n>");
-		String password = console.nextLine().trim();
+		password = console.nextLine().trim();
 		System.out.println();
 
 		String[] response = null;
@@ -67,10 +72,9 @@ public class Client implements ClientRunnable {
 				/// Continue with validation process
 				// Parse rand to an int
 				int rand = Integer.parseInt(response[1]);
-
+				rand_cookie = rand;
 				// Use rand to generate RES
 				String RES = org.teamnine.common.Authenticator.A3(rand, password); // use username as secret key just for now
-
 				// Send response to server
 				String responseMessage = "START\n" +
 						"MSGTYPE: RESPONSE\n" +
@@ -112,8 +116,19 @@ public class Client implements ClientRunnable {
 		do {
 			// Create socket to server
 			tcpClientSocket = new Socket(ip, port);
-			tcp_socket_out = new PrintWriter(tcpClientSocket.getOutputStream(), true);
-			tcp_socket_in = new Scanner(tcpClientSocket.getInputStream());
+			Cipher decCipher = Authenticator.getCipher(Cipher.DECRYPT_MODE, rand_cookie, password);
+			Cipher inCipher = Authenticator.getCipher(Cipher.ENCRYPT_MODE, rand_cookie, password);
+
+			CipherInputStream cipherInput = new CipherInputStream(
+					tcpClientSocket.getInputStream(),
+					decCipher
+			);
+			CipherOutputStream cipherOutput = new CipherOutputStream(
+					tcpClientSocket.getOutputStream(),
+					inCipher
+			);
+			tcp_socket_out = new PrintWriter(cipherOutput, true);
+			tcp_socket_in = new Scanner(cipherInput);
 			pb = new ParseBuilder(tcp_socket_in);
 
 			// Send connect request to server
@@ -122,7 +137,7 @@ public class Client implements ClientRunnable {
 					"USERNAME: " + loggedInUsername + "\n" +
 					"RAND_COOKIE: " + rand_cookie + "\n" +
 					"END");
-
+			tcp_socket_out.flush();
 			// Receive response
 			response = receiveTCPMessage();
 
@@ -182,7 +197,6 @@ public class Client implements ClientRunnable {
 					"SESSION_ID: " + seshID + "\n" +
 					"MESSAGE: " + message + "\n" +
 					"END");
-
 			// Add to message history
 			String _message = String.format(messageFormat, loggedInUsername, message);
 			messageHistory.add(_message);
@@ -294,16 +308,18 @@ public class Client implements ClientRunnable {
 		System.out.println(UDPHandler.data(udpClientMessage.getData()));
 		udpClientSocket.send(udpClientMessage);
 	}
-
 	public String[] receiveUDPMessage() throws Exception {
 		// Receive message from UDP socket
-		DatagramPacket packet = new DatagramPacket(new byte[10000], 10000);
+		DatagramPacket packet = new DatagramPacket(new byte[1000000], 1000000);
 		udpClientSocket.receive(packet);
 
 		// Get message from the packet
 		byte[] response = packet.getData();
 		String message = UDPHandler.data(response);
-
+		if (!message.startsWith("START")) {
+			Cipher cipher = Authenticator.getCipher(Cipher.DECRYPT_MODE, rand_cookie, password);
+			message = new String(cipher.doFinal(response, 0, packet.getLength()), StandardCharsets.UTF_8);
+		}
 		// Get message
 		tcp_socket_in = new Scanner(message);
 		this.pb = new ParseBuilder(tcp_socket_in);
@@ -312,6 +328,40 @@ public class Client implements ClientRunnable {
 
 		return toReturn;
 	}
+	/*public String[] receiveUDPMessage(String before) throws Exception {
+		int tries = 0;
+		String[] toReturn = null;
+		while (tries < 5) {
+			try {
+				// Receive message from UDP socket
+				DatagramPacket packet = new DatagramPacket(new byte[1000000], 1000000);
+				udpClientSocket.receive(packet);
+
+				// Get message from the packet
+				byte[] response = packet.getData();
+				String message = UDPHandler.data(response);
+				if (!message.startsWith("START")) {
+					Cipher cipher = Authenticator.getCipher(Cipher.DECRYPT_MODE, rand_cookie, password);
+					message = new String(cipher.doFinal(response, 0, packet.getLength()), StandardCharsets.UTF_8);
+				}
+				// Get message
+				tcp_socket_in = new Scanner(message);
+				this.pb = new ParseBuilder(tcp_socket_in);
+				toReturn = receiveTCPMessage();
+				this.pb.close();
+				break;
+			} catch (ParseException e) {
+				sendUDPMessage(before);
+				tries++;
+			}
+		}
+
+		if (toReturn == null)
+			System.err.println("Couldn't parse UDP message after 5 tries.");
+
+		return toReturn;
+
+	}*/
 
 	public String[] receiveTCPMessage() throws Exception {
 		// Create info variables
