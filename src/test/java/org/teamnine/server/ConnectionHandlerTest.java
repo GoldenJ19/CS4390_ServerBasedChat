@@ -21,11 +21,11 @@ public class ConnectionHandlerTest {
 		) {
 			final int randCookie = 12;
 
-			ConnectionHandler ch1 = new ConnectionHandler(chatRoom, 1337, randCookie, dbConn);
+			ConnectionHandler ch1 = new ConnectionHandler(chatRoom, 1337, randCookie, dbConn, "hello world");
 			Thread chThread = new Thread(ch1);
 			chThread.start();
 
-			ConnectionHandler ch2 = new ConnectionHandler(chatRoom, 1338, 14, dbConn);
+			ConnectionHandler ch2 = new ConnectionHandler(chatRoom, 1338, 14, dbConn, "hello world");
 			Thread ch2Thread = new Thread(ch2);
 			ch2Thread.start();
 			Thread.sleep(500);
