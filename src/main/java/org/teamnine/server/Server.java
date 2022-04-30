@@ -35,7 +35,9 @@ public class Server {
 			try {
 				UDPsocket.receive(UDPmsg);
 				received = UDPmsg.getData();
-				int randCookie = authHandler.handleHello(UDPmsg.getData());
+				String[] ptrString = new String[1];
+				int randCookie = authHandler.handleHello(UDPmsg.getData(), ptrString);
+				String username = ptrString[0];
 
 				//if user is subbed, send CHALLENGE with randcookie
 				if (randCookie > -1) {
@@ -52,20 +54,20 @@ public class Server {
 					// Bound check tcp port
 					while (!successfulLogin) {
 						received = new byte[10000];
-						received = authHandler.createAuthMsg(false, randCookie, 0);
+						received = authHandler.createAuthMsg(false, randCookie, username, 0);
 						UDPmsg = new DatagramPacket(received, received.length, UDPmsg.getAddress(), UDPmsg.getPort());
 						UDPsocket.send(UDPmsg);
 						successfulLogin = authHandler.processResponse(received);
 					}
 					// connection handler
 					int chTCPPort = tcpPort++;
-					ConnectionHandler ch = new ConnectionHandler(chatRoom, chTCPPort, randCookie, dbConn);
+					ConnectionHandler ch = new ConnectionHandler(chatRoom, chTCPPort, randCookie, dbConn,
+							authHandler.getPasswordKeyOf(username));
 					Thread thread = new Thread(ch);
 					thread.start();
 					connections.put(ch, thread);
 					received = new byte[10000];
-					//Note: Should pass TCP port as well
-					received = authHandler.createAuthMsg(true, randCookie, chTCPPort);
+					received = authHandler.createAuthMsg(true, randCookie, username, chTCPPort);
 					UDPmsg = new DatagramPacket(received, received.length, UDPmsg.getAddress(), UDPmsg.getPort());
 					UDPsocket.send(UDPmsg);
 				}
@@ -97,6 +99,8 @@ public class Server {
 		try {
 			server = new Server(1234, 5678);
 			server.start();
+		} catch (Exception e) {
+			e.printStackTrace();
 		} finally {
 			server.close();
 		}

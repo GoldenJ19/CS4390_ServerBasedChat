@@ -4,8 +4,10 @@ import org.teamnine.common.Authenticator;
 import org.teamnine.common.ParseBuilder;
 import org.teamnine.common.ParseException;
 
+import javax.crypto.Cipher;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,6 +18,7 @@ import java.util.Scanner;
 
 public class UDPHandler {
 	private Map<String, String> clientChallenges = new HashMap<>();
+	private Map<String, String> clientPasswords = new HashMap<>();
 	private Authenticator auth;
 	private ParseBuilder parser;
 	private Connection dbConn;
@@ -42,7 +45,7 @@ public class UDPHandler {
 
 	//Given a byte string, convert to a normal string and determine
 	//given string (clientID) is in the list of valid users
-	public int handleHello(byte[] received) throws Exception {
+	public int handleHello(byte[] received, String[] ptrString) throws Exception {
 		boolean validUser = false;
 		System.out.println(data(received));
 		ParseBuilder pb = new ParseBuilder(new Scanner(new ByteArrayInputStream(received)));
@@ -59,12 +62,14 @@ public class UDPHandler {
 		}
 		//If user within validIDs, create challenge. Otherwise, return -1
 		if (validUser) {
+			ptrString[0] = username;
 			return createChallenge(username);
 	} else {
 			return -1;
 		}
 	}
 
+	public String getPasswordKeyOf(String clientID) { return clientPasswords.get(clientID); }
 	public boolean processResponse(byte[] received) throws IOException {
 		boolean correctKey = false;
 		String username, res;
@@ -78,7 +83,7 @@ public class UDPHandler {
 		}
 
 		String expected = clientChallenges.get(username);
-		return expected.equals(res);
+		return expected != null && expected.equals(res);
 	}
 
 	public byte[] createChallengeMSG(int rand) {
@@ -90,7 +95,7 @@ public class UDPHandler {
 
 	}
 
-	public byte[] createAuthMsg(boolean success, int randCookie, int portNum) {
+	public byte[] createAuthMsg(boolean success, int randCookie, String ClientID, int portNum) throws Exception {
 		String msg = null;
 		if (!success) {
 			msg = "START\n" +
@@ -103,8 +108,8 @@ public class UDPHandler {
 					"RAND_COOKIE: "+randCookie+"\n"+
 					"PORT_NUMBER: "+portNum+"\n"+
 					"END\n";
-			return msg.getBytes();
-
+			Cipher cipher = Authenticator.getCipher(Cipher.ENCRYPT_MODE, randCookie, clientPasswords.get(ClientID));
+			return cipher.doFinal(msg.getBytes(StandardCharsets.UTF_8));
 		}
 
 	}
@@ -112,7 +117,7 @@ public class UDPHandler {
 	//Given a clientID, fetches their secret key from the database.
 	//Encrypts the key using MD5 and a rand_cookie, then adds the
 	//client id and XRES into client challenges. Returns the rand cookie
-	public int createChallenge(String Client_ID) throws Exception {
+	public int createChallenge(final String Client_ID) throws Exception {
 		int rand = (int) Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
 		String testKey = null;
 		String sql = "SELECT skey FROM USERS WHERE name = ?;";
@@ -122,8 +127,10 @@ public class UDPHandler {
 			testKey = rs.getString(1);
 		}
 
+
 		String XRES = Authenticator.A3(rand, testKey);
 		clientChallenges.put(Client_ID, XRES);
+		clientPasswords.put(Client_ID, testKey);
 		return rand;
 	}
 
