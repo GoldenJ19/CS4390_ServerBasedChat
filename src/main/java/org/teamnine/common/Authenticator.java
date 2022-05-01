@@ -28,9 +28,10 @@ public class Authenticator{
 	//a randCookie and client K_A concatenated
 	public static String A3(int rand, String secretKey) {
 		try {  
+			//Concat the rand cookie and secretkey
 			String input = String.valueOf(rand) + secretKey;
 			
-            // Static getInstance method is called with hashing MD5
+            // getInstance using MD5
             MessageDigest md = MessageDigest.getInstance("MD5");
   
             // digest() method is called to calculate message digest
@@ -59,9 +60,16 @@ public class Authenticator{
 	//a randCookie and client K_A concatenated
 	public static byte[] A8(int rand, String secretKey) {
 		try {
+			//Concat the rand cookie and secretkey
 			String concat = rand + secretKey;
+			
+			//Convert the concatenated key to a byte array
 			byte[] key = concat.getBytes(StandardCharsets.UTF_8);
+			
+			//getInstance using SHA-256
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			
+			//Reset digest, then update using the new byte array and SHA-256
 	        digest.reset();
 	        digest.update(key);
 
