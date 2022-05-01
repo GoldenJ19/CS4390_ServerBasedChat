@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Base64;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 public class ChatRoom implements Closeable {
@@ -27,7 +26,7 @@ public class ChatRoom implements Closeable {
 			this.clienta = clienta;
 			this.clientb = clientb;
 
-			byte[] sessionIDBytes = new byte[8];
+			byte[] sessionIDBytes = new byte[9];
 			new Random().nextBytes(sessionIDBytes);
 			this.sessionID = Base64.getEncoder().encodeToString(sessionIDBytes);
 		}

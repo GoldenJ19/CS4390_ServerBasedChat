@@ -31,7 +31,7 @@ public class Client implements ClientRunnable {
 	private int serverPort = -1, rand_cookie = -1;
 	private String seshID = null;
 	private static final int serverPort_welcoming = 1234;
-	private static final String serverIP = "127.0.0.1", messageFormat = "%16s:\t%s\n", command_connect = "CONNECT", command_exitapp = "EXIT", command_logoff = "LOG OFF",
+	private static final String serverIP = "127.0.0.1", messageFormat = "%16s:\t%s\n", messageFormatHistory = "%16s\t%s:\t%s\n", command_connect = "CONNECT", command_exitapp = "EXIT", command_logoff = "LOG OFF",
 			_separator = "----------------------------------------------";
 	private String loggedInUsername = null, chattingWith = null;
 	private ArrayList<String> messageHistory;
@@ -436,12 +436,13 @@ public class Client implements ClientRunnable {
 					pb.pass("END");
 					return new String[]{msgType, seshID + "", message};
 
-				// Return sender and message
+				// Return sender, message, and seshID
 				case "HISTORY_RESP":
 					sender = pb.pass("SENDER:").extractLine();
 					message = pb.pass("MESSAGE:").extractLine();
+					seshID = pb.pass("SESSION_ID:").extractLine();
 					pb.pass("END");
-					return new String[]{msgType, sender, message};
+					return new String[]{msgType, sender, message, seshID};
 
 				// Return rand_cookie and port_number
 				case "AUTH_SUCCESS":
@@ -534,7 +535,7 @@ public class Client implements ClientRunnable {
 								/** Chat loop */
 								while (!inputGiven) {
 									// Prompt user
-									System.out.printf("CHATTING WITH: %s\n%s:\n%s\n%s\n| %-60s |\n| %-60s |\n>", chattingWith, _separator, getMessageHistoryString(), _separator, "Enter 1 to send a chat, 2 to refresh your message history", "3 to view full message history, or 4 to disband chat session");
+									System.out.printf("CHATTING WITH: %s | SESSION_ID: %s\n%s\n%s\n%s\n| %-60s |\n| %-60s |\n>", chattingWith, seshID, _separator, getMessageHistoryString(), _separator, "Enter 1 to send a chat, 2 to refresh your message history", "3 to view full message history, or 4 to disband chat session");
 									while(!in.ready()) {
 										Thread.sleep(200);
 									}
@@ -894,7 +895,8 @@ public class Client implements ClientRunnable {
 							// Print entire history to console
 							clientB = response[1];
 							String _message = response[2];
-							System.out.printf(messageFormat, clientB, _message);
+							_seshID = response[3];
+							System.out.printf(messageFormatHistory, _seshID, clientB, _message);
 							break;
 
 						default:
@@ -918,6 +920,7 @@ public class Client implements ClientRunnable {
 	// Does not work on IntelliJ Run console, must use an OS-based terminal.
 	// You can use IntelliJ's terminal instead, by changing directories to \target\classes, and then running the "java org.teamnine.client.Client" command.
 	private static void ClearConsole() {
+
 		try {
 			String operatingSystem = System.getProperty("os.name");
 
@@ -926,10 +929,13 @@ public class Client implements ClientRunnable {
 				Process startProcess = pb.inheritIO().start();
 				startProcess.waitFor();
 			} else {
-				ProcessBuilder pb = new ProcessBuilder("clear");
-				Process startProcess = pb.inheritIO().start();
+				String term = System.getenv("TERM");
+				if (term != null) {
+					ProcessBuilder pb = new ProcessBuilder("clear");
+					Process startProcess = pb.inheritIO().start();
 
-				startProcess.waitFor();
+					startProcess.waitFor();
+				}
 			}
 		} catch (Exception e) {
 			System.out.println(e);
