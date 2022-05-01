@@ -16,6 +16,8 @@ public class Server {
 	private ChatRoom chatRoom;
 	private Map<ConnectionHandler, Thread> connections = new HashMap<>();
 	private int tcpPort;
+	
+	//Server constructor
 	public Server(int udpPort, int tcpPort) 
 		throws IOException, SQLException, ClassNotFoundException {
 
@@ -26,15 +28,22 @@ public class Server {
 		this.tcpPort = tcpPort;
 	}
 
+	//Start function
 	public void start() throws Exception {
 		while (true) {
+			//Create UDP handler
 			UDPHandler authHandler = new UDPHandler(dbConn);
+			
+			//Prepare DatagramPacket for reception
 			received = new byte[10000];
 			UDPmsg = new DatagramPacket(received, received.length);
 
 			try {
+				//Recieve client message (should be HELLO)
 				UDPsocket.receive(UDPmsg);
 				received = UDPmsg.getData();
+				
+				//ptrString should get clientID after handleHello is called
 				String[] ptrString = new String[1];
 				int randCookie = authHandler.handleHello(UDPmsg.getData(), ptrString);
 				String username = ptrString[0];
@@ -77,7 +86,11 @@ public class Server {
 			}
 		}
 	}
+	
+	//Closing all connections before exiting
 	public void close() throws Exception {
+		//If any connections or threads
+		//are not null or closed, end
 		if (dbConn != null)
 			dbConn.close();
 
@@ -97,11 +110,14 @@ public class Server {
 	public static void main(String[] args) throws Exception {
 		Server server = null;
 		try {
+			//attempt to start the server using UDP port 1234 and
+			//TCP port 5678
 			server = new Server(1234, 5678);
 			server.start();
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			//close server once complete
 			server.close();
 		}
 	}
