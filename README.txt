@@ -9,7 +9,9 @@ Rumsha Hyder-Chowdhury
 Grant Jin
 
 Project Description:
-A server/client system that allows clients to enter chat sesssions with other clients. Clients are also able to see their chat history with other clients. Client login is handled using UDP transport, while other connections are over TCP. All TCP messages are encrypted using AES ciphering. The project is organized using Maven.
+A server/client system that allows clients to enter chat sesssions with other clients. Clients are also able to see their chat history with other clients.
+Client login is handled using UDP transport, while other connections are over TCP. All TCP messages are encrypted using AES ciphering. The project is 
+organized using Maven.
 
 General Use:
 Begin the server by running Server.java. The server will wait on client messages to be handled, and is otherwise dormant.
