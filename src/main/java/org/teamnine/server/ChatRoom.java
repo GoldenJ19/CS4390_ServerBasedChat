@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 public class ChatRoom implements Closeable {
@@ -55,6 +56,19 @@ public class ChatRoom implements Closeable {
 			}
 		}
 
+		public boolean isInSession( String username ) {
+			return clienta.getUsername().equals(username) || clientb.getUsername().equals(username);
+		}
+
+		public String getClientA() {
+			return clienta.getUsername();
+		}
+
+		public String getClientB() {
+			return clientb.getUsername();
+		}
+
+
 		public synchronized void end() {
 			clienta.endNotif(sessionID);
 			clientb.endNotif(sessionID);
@@ -71,13 +85,19 @@ public class ChatRoom implements Closeable {
 	public synchronized void unregisterUser(ConnectionHandler ch) {
 		connectedUsers.remove(ch.getUsername());
 		System.out.println("User " + ch.getUsername() + " is unregistered.");
+		for( Session session : sessions.values() ) {
+			if( session.isInSession(ch.getUsername()) ) {
+				session.end();
+				break;
+			}
+		}
 	}
 
 	// chatRequest signals clientb handler to send a chat started. Returns a sessionID.
 	public synchronized String chatRequest(ConnectionHandler clientaHandler, String clientb) throws ChatRoomException {
 		if (!connectedUsers.containsKey(clientb))
 			throw new ChatRoomException("Client B " + clientb + "not connected.");
-		if (busyUsers.containsKey("Client B" + clientb + "is busy"))
+		if (busyUsers.containsKey(clientb))
 			throw new ChatRoomException("Client B" + clientb + "is busy.");
 
 		var clientbHandler = connectedUsers.get(clientb);
@@ -106,7 +126,8 @@ public class ChatRoom implements Closeable {
 		var session = sessions.get(sessionID);
 		if (session == null)
 			throw new ChatRoomException("Session "+sessionID+" doesn't exist.");
-
+		busyUsers.remove(session.getClientA());
+		busyUsers.remove(session.getClientB());
 		session.end();
 	}
 

@@ -188,7 +188,7 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	public void unreachable(String clientb) {
-		out.print(
+		out.println(
 			"START\n" +
 			"MSGTYPE: UNREACHABLE\n" +
 			"CLIENTB: "+clientb+"\n" +

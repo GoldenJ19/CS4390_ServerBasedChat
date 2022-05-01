@@ -308,6 +308,7 @@ public class Client implements ClientRunnable {
 		System.out.println(UDPHandler.data(udpClientMessage.getData()));
 		udpClientSocket.send(udpClientMessage);
 	}
+
 	public String[] receiveUDPMessage() throws Exception {
 		// Receive message from UDP socket
 		DatagramPacket packet = new DatagramPacket(new byte[1000000], 1000000);
@@ -366,7 +367,7 @@ public class Client implements ClientRunnable {
 	public String[] receiveTCPMessage() throws Exception {
 		// Create info variables
 		int rand = -1, rand_cookie = -1, port_number = -1;
-		String seshID = null, msgType = null, clientB = null, message = null, desc = null;
+		String seshID = null, msgType = null, clientB = null, message = null, desc = null, sender = null;
 
 		// Receive response from server
 		if (tcp_socket_in.hasNext()) {
@@ -376,34 +377,42 @@ public class Client implements ClientRunnable {
 
 			/// Switch case to determine next steps
 			switch (msgType) {
+				// Return nothing extra
+				case "CONNECTED":
+					pb.pass("END");
+					return new String[]{msgType};
+
 				// Return desc
 				case "CLIENT_ERROR":
 				case "AUTH_FAIL":
 					desc = pb.pass("DESC:").extractLine();
 					pb.pass("END");
 					return new String[]{msgType, desc};
-				// Return nothing extra
-				case "CONNECTED":
-					pb.pass("END");
-					return new String[]{msgType};
 
 				// Return seshID
 				case "END_NOTIF":
 					seshID = pb.pass("SESSION_ID:").extract();
 					pb.pass("END");
 					return new String[]{msgType, seshID + ""};
-				// Return seshID and clientB name
-				case "CHAT_STARTED":
-					seshID = pb.pass("SESSION_ID:").extract();
-					clientB = pb.pass("CLIENTB:").extractLine();
-					pb.pass("END");
-					return new String[]{msgType, seshID + "", clientB};
 
 				// Return clientB name
 				case "UNREACHABLE":
 					clientB = pb.pass("CLIENTB:").extractLine();
 					pb.pass("END");
 					return new String[]{msgType, clientB};
+
+				// Return rand
+				case "CHALLENGE":
+					rand = Integer.parseInt(pb.pass("RAND_COOKIE:").extract());
+					pb.pass("END");
+					return new String[]{msgType, rand + ""};
+
+				// Return seshID and clientB name
+				case "CHAT_STARTED":
+					seshID = pb.pass("SESSION_ID:").extract();
+					clientB = pb.pass("CLIENTB:").extractLine();
+					pb.pass("END");
+					return new String[]{msgType, seshID + "", clientB};
 
 				// Return seshID and message
 				case "CHAT":
@@ -412,11 +421,12 @@ public class Client implements ClientRunnable {
 					pb.pass("END");
 					return new String[]{msgType, seshID + "", message};
 
-				// Return rand
-				case "CHALLENGE":
-					rand = Integer.parseInt(pb.pass("RAND_COOKIE:").extract());
+				// Return sender and message
+				case "HISTORY_RESP":
+					sender = pb.pass("SENDER:").extractLine();
+					message = pb.pass("MESSAGE:").extractLine();
 					pb.pass("END");
-					return new String[]{msgType, rand + ""};
+					return new String[]{msgType, sender, message};
 
 				// Return rand_cookie and port_number
 				case "AUTH_SUCCESS":
@@ -561,6 +571,8 @@ public class Client implements ClientRunnable {
 											try {
 												ClearConsole();
 												getMessageHistory(chattingWith);
+												Thread.sleep(2000);
+												System.out.println();
 											} catch (Exception e) {
 												// In case it doesn't succeed, print this message and loop back.
 												ClearConsole();
@@ -720,16 +732,21 @@ public class Client implements ClientRunnable {
 						// Wait 30 seconds for response (reasonable amount of time)
 						Thread.sleep(30000);
 					} catch (InterruptedException e) {
-						// Join chat session we've been invited to
-						System.out.print("\nATTENTION! Chat session initiated. Entering chat room.");
-						clientFound = true;
-						Thread.sleep(500);
-						System.out.print(".");
-						Thread.sleep(500);
-						System.out.print(".");
-						Thread.sleep(500);
-						ClearConsole();
-						continue;
+						if( chatClient.seshID == null ) {
+							continue;
+						}
+						else {
+							// Join chat session we've been invited to
+							System.out.print("\nATTENTION! Chat session initiated. Entering chat room.");
+							clientFound = true;
+							Thread.sleep(500);
+							System.out.print(".");
+							Thread.sleep(500);
+							System.out.print(".");
+							Thread.sleep(500);
+							ClearConsole();
+							continue;
+						}
 					}
 
 					System.out.println("ERROR. Chat request timed out. Please try again.\n");
@@ -768,16 +785,29 @@ public class Client implements ClientRunnable {
 
 			// Check session id, if -1 we know we're not in a chat right now.
 			if (response != null) {
-				if (seshID == null && response[0].equals("CHAT_STARTED")) {
-					/// We're not in a chat session
-					// Initialize chat session
-					seshID = response[1];
-					chattingWith = response[2];
-					messageHistory = new ArrayList<String>();
+				if (seshID == null) {
+					if ( response[0].equals("CHAT_STARTED") ) {
+						/// We're not in a chat session
+						// Initialize chat session
+						seshID = response[1];
+						chattingWith = response[2];
+						messageHistory = new ArrayList<String>();
 
-					// Need to stop the user from entering a person to chat with if someone starts a chat
-					// session with us.
-					interruptThread(mainThread);
+						// Need to stop the user from entering a person to chat with if someone starts a chat
+						// session with us.
+						interruptThread(mainThread);
+					}
+					else if( response[0].equals("UNREACHABLE") ) {
+						// Whenever we get this message, we attempted to chat with a user that is already in a chat
+						// session, or we try to chat with a user that is not connected
+						String clientB = response[1];
+						System.out.println("\nERROR: " + clientB + " is unreachable. They are either offline, or already in a chat session.");
+
+						interruptThread(mainThread);
+					}
+					else {
+						System.out.println("ERROR! Unexpected message received from server!");
+					}
 				} else if (seshID != null) {
 					/// We are in a chat session
 					String _seshID = null;
@@ -805,15 +835,6 @@ public class Client implements ClientRunnable {
 								// Message received from client we're not chatting with...somehow
 								System.out.println("ERROR: Received message from unexpected client.");
 							}
-							break;
-
-						case "UNREACHABLE":
-							// Whenever we get this message, we want to end the chat session, but print a special
-							// print statement that lets us know we lost connection with client b (whatever its name is)
-							clientB = response[1];
-							seshID = null;
-							System.out.println("\nCONNECTION TERMINATED: " + clientB + " has lost connection to the chat session.");
-							interruptThread(mainThread);
 							break;
 
 						case "END_NOTIF":
