@@ -570,6 +570,7 @@ public class Client implements ClientRunnable {
 										case 3:
 											try {
 												ClearConsole();
+												System.out.println("Full Chat History:\n");
 												getMessageHistory(chattingWith);
 												Thread.sleep(2000);
 												System.out.println();
