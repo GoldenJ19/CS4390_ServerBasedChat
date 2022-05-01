@@ -40,6 +40,8 @@ public class Client implements ClientRunnable {
 	private static Thread mainThread = null, inputThread = null;
 	private static String receivedInput = null;
 	private static String password = null;
+	private static boolean showLogsInChat = false;
+
 	public boolean contactServerWelcomingSocket(String ip, int port) throws Exception {
 		// Login
 		Scanner console = new Scanner(System.in);
@@ -60,6 +62,7 @@ public class Client implements ClientRunnable {
 			randomGen = new Random();
 
 			// Send connect request to server
+			System.out.println("Sending HELLO Request...");
 			String helloMessage = "START\n" +
 					"MSGTYPE: HELLO\n" +
 					"USERNAME: " + username + "\n" +
@@ -70,6 +73,7 @@ public class Client implements ClientRunnable {
 			response = receiveUDPMessage();
 
 			// Validate response... should be CHALLENGE, otherwise AUTH_FAIL
+			System.out.printf("Received %s Response\n", response[0]);
 			if (response != null && response[0].equals("CHALLENGE")) {
 				/// Continue with validation process
 				// Parse rand to an int
@@ -78,6 +82,7 @@ public class Client implements ClientRunnable {
 				// Use rand to generate RES
 				String RES = org.teamnine.common.Authenticator.A3(rand, password); // use username as secret key just for now
 				// Send response to server
+				System.out.println("Sending RESPONSE Request...");
 				String responseMessage = "START\n" +
 						"MSGTYPE: RESPONSE\n" +
 						"USERNAME: " + username + "\n" +
@@ -89,6 +94,7 @@ public class Client implements ClientRunnable {
 				response = receiveUDPMessage();
 
 				// Validate response... should be AUTH_SUCCESS, otherwise AUTH_FAIL
+				System.out.printf("Received %s Response\n", response[0]);
 				if (response != null && response[0].equals("AUTH_SUCCESS")) {
 					// Parse rand_cookie and serverPort to an int
 					rand_cookie = Integer.parseInt(response[1]);
@@ -134,6 +140,7 @@ public class Client implements ClientRunnable {
 			pb = new ParseBuilder(tcp_socket_in);
 
 			// Send connect request to server
+			System.out.println("Sending CONNECT Request...");
 			tcp_socket_out.println("START\n" +
 					"MSGTYPE: CONNECT\n" +
 					"USERNAME: " + loggedInUsername + "\n" +
@@ -144,6 +151,7 @@ public class Client implements ClientRunnable {
 			response = receiveTCPMessage();
 
 			// Validate response... should be CONNECTED, otherwise AUTH_FAIL
+			System.out.printf("Received %s Response\n", response[0]);
 			if (response != null && response[0].equals("CONNECTED")) {
 				return true;
 			} else if (response != null && response[0].equals("AUTH_FAIL")) {
@@ -162,6 +170,7 @@ public class Client implements ClientRunnable {
 			//String[] response = null;
 
 			// Send connect request to server
+			System.out.println("Sending CHAT_REQUEST Request...");
 			tcp_socket_out.println("START\n" +
 					"MSGTYPE: CHAT_REQUEST\n" +
 					"CLIENTB: " + clientB + "\n" +
@@ -194,6 +203,9 @@ public class Client implements ClientRunnable {
 			//String[] response = null;
 
 			// Send connect request to server
+			if( showLogsInChat ) {
+				System.out.println("Sending CHAT Request...");
+			}
 			tcp_socket_out.println("START\n" +
 					"MSGTYPE: CHAT\n" +
 					"SESSION_ID: " + seshID + "\n" +
@@ -235,6 +247,7 @@ public class Client implements ClientRunnable {
 			//String[] response = null;
 
 			// Send connect request to server
+			System.out.println("Sending END_REQUEST Request...");
 			tcp_socket_out.println("START\n" +
 					"MSGTYPE: END_REQUEST\n" +
 					"SESSION_ID: " + seshID + "\n" +
@@ -268,6 +281,9 @@ public class Client implements ClientRunnable {
 			//String[] response = null;
 
 			// Send connect request to server
+			if(showLogsInChat) {
+				System.out.println("Sending HISTORY_REQ Request...");
+			}
 			tcp_socket_out.println("START\n" +
 					"MSGTYPE: HISTORY_REQ\n" +
 					"CLIENTB: " + clientB + "\n" +
@@ -307,7 +323,6 @@ public class Client implements ClientRunnable {
 
 	public void sendUDPMessage(String message) throws IOException {
 		udpClientMessage = new DatagramPacket(message.getBytes(), message.length());
-		System.out.println(UDPHandler.data(udpClientMessage.getData()));
 		udpClientSocket.send(udpClientMessage);
 	}
 
@@ -646,6 +661,12 @@ public class Client implements ClientRunnable {
 	 * @throws Exception
 	 */
 	public static void main(String args[]) throws Exception {
+		// Read optional argument
+		if( args.length > 0 && args[0].equals("showlogs") ) {
+			System.out.println("Showing logs during chat sessions...");
+			showLogsInChat = true;
+		}
+
 		// To check input of terminal
 		Scanner in = new Scanner(System.in);
 		System.out.printf("Welcome to the Server-Based Chat Application\nPlease enter the command %s or %s\n>", command_connect, command_exitapp);
@@ -727,12 +748,12 @@ public class Client implements ClientRunnable {
 						inputThread = null;
 						//in.close();
 						// Join chat session we've been invited to
-						System.out.print("\nATTENTION! Another user has started a chat with you. Entering chat room.");
+						System.out.print("ATTENTION! Another user has started a chat with you. Entering chat room.");
 						clientFound = true;
 						Thread.sleep(500);
 						System.out.print(".");
 						Thread.sleep(500);
-						System.out.print(".");
+						System.out.println(".");
 						Thread.sleep(500);
 						ClearConsole();
 						continue;
@@ -753,12 +774,12 @@ public class Client implements ClientRunnable {
 						}
 						else {
 							// Join chat session we've been invited to
-							System.out.print("\nATTENTION! Chat session initiated. Entering chat room.");
+							System.out.print("ATTENTION! Chat session initiated. Entering chat room.");
 							clientFound = true;
 							Thread.sleep(500);
 							System.out.print(".");
 							Thread.sleep(500);
-							System.out.print(".");
+							System.out.println(".");
 							Thread.sleep(500);
 							ClearConsole();
 							continue;
@@ -802,6 +823,7 @@ public class Client implements ClientRunnable {
 			// Check session id, if -1 we know we're not in a chat right now.
 			if (response != null) {
 				if (seshID == null) {
+					System.out.printf("Received %s Response\n", response[0]);
 					if ( response[0].equals("CHAT_STARTED") ) {
 						/// We're not in a chat session
 						// Initialize chat session
@@ -825,6 +847,10 @@ public class Client implements ClientRunnable {
 						System.out.println("ERROR! Unexpected message received from server!");
 					}
 				} else if (seshID != null) {
+					if( showLogsInChat ) {
+						System.out.printf("Received %s Response\n", response[0]);
+					}
+
 					/// We are in a chat session
 					String _seshID = null;
 					String clientB = null;
