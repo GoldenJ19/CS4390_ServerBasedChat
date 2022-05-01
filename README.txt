@@ -28,8 +28,10 @@ rumsha       testpass4
 File Descriptions:
 Client Package:
   Client: The client class, representing the client.
+  ClientRunnable: The client thread class.
 Common Package:
   Authenticator: Class containing security functions for the program (MD5, SHA256, AES encryption/decryption)
+  FixedCipherOutputStream: javax.crypto class edited to work for this project.
   ParseBuilder: Class containing the parsehandling functions for client/server messages.
   ParseException: Exception unique to ParseBuilder, called when there is an error in parsing.
 Server Package:
