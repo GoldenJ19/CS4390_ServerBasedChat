@@ -87,7 +87,12 @@ public class ChatRoom implements Closeable {
 		System.out.println("User " + ch.getUsername() + " is unregistered.");
 		for( Session session : sessions.values() ) {
 			if( session.isInSession(ch.getUsername()) ) {
-				session.end();
+				try {
+					endSession(session.getSessionID());
+				}
+				catch( ChatRoomException e ) {
+					throw new RuntimeException("Something went \"seriously wrong\" when trying to end session.");
+				}
 				break;
 			}
 		}
@@ -129,6 +134,7 @@ public class ChatRoom implements Closeable {
 		busyUsers.remove(session.getClientA());
 		busyUsers.remove(session.getClientB());
 		session.end();
+		sessions.remove(sessionID);
 	}
 
 	public void close() {
