@@ -38,6 +38,3 @@ Server Package:
   Server: The server class, representing the server.
   UDPHandler: Controls the UDP message handling on the server side. 
 
-
-Notes:
-Must be running Java 17
