@@ -1,5 +1,5 @@
 To execute client:
-mvn exec:java -Dexec.mainClass="org.teamnine.client.Client"
+Run the client.bat file in out\artifacts\Client_jar (or the jar file for non-windows users)
 
 To execute server:
-mvn exec:java -Dexec.mainClass="org.teamnine.client.Server"
+Run the server.bat file in out\artifacts\Client_jar (or the jar file for non-windows users)

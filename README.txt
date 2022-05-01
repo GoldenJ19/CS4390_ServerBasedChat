@@ -14,20 +14,13 @@ Client login is handled using UDP transport, while other connections are over TC
 The project is organized using Maven. The client code is in src/main/java/org/teamnine/client, and the server code is in src/main/java/org/teamnine/server.
 
 General Use:
-To compile this project, run 'mvn compile' from the command line. It will put all of the bytecode for the classes in target/classes/org/teamnine/. To run the server. You will need maven and java 13+ to run the code. 
+To compile this project, you'll need to install the IntelliJ or Eclipse IDEs. Import the project as a Maven project, and compile it accordingly.
 
-To run the client type:
-mvn exec:java -Dexec.mainClass="org.teamnine.client.Client"
+To run this project, you can output .jar files for both the client and server using these IDEs. This has been done for you, and can be found in the
+out\artifacts folder. Windows users can use client.bat and server.bat to run the clients and server accordingly.
 
-To run the server type:
-mvn exec:java -Dexec.mainClass="org.teamnine.server.Server"
-
-You can also use an IDE capable of handling maven (i.e. IntellJ or eclipse) to run the relevant files.
-
-Begin the server by running Server.java. The server will wait on client messages to be handled, and is otherwise dormant.
-
-To connect a client, run Client.java. Mulitple instances of Client can be run and handled by the server. The server database currently contains only 4 
-valid client IDs and secret keys, which are as follows (case-sensitive):
+To connect a client, run client.bat (or the jar file in out\artifacts\Client_jar). Mulitple instances of Client can be run and handled by the server.
+The server database currently contains only 4 valid client IDs and secret keys, which are as follows (case-sensitive):
 
 CientID      Secret Key
 ahad         testpass1
