@@ -16,8 +16,8 @@ The project is organized using Maven.
 General Use:
 Begin the server by running Server.java. The server will wait on client messages to be handled, and is otherwise dormant.
 
-To connect a client, run Client.java. Mulitple instances of Client can be run and handled by the server. The server database
-currently contains only 4 valid client IDs and secret keys, which are as follows (case-sensitive):
+To connect a client, run Client.java. Mulitple instances of Client can be run and handled by the server. The server database currently contains only 4 
+valid client IDs and secret keys, which are as follows (case-sensitive):
 
 CientID      Secret Key
 ahad         testpass1
