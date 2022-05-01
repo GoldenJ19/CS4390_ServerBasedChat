@@ -29,7 +29,8 @@ Common Package:
   ParseException: Exception unique to ParseBuilder, called when there is an error in parsing.
 Server Package:
   ChatRoom: Controls chat session functions between two clients.
-  ChatRoomException: 
+  ChatRoomException: Exception unique to ChatRoom.
+  ConnectionHandler: Controls the TCP message handling on server side.
   DatabseSetup: Sets up the database of client IDs/secret keys. Creates server.db if it doesn't already exist.
   Server: The server class, representing the server.
   UDPHandler: Controls the UDP message handling on the server side. 
