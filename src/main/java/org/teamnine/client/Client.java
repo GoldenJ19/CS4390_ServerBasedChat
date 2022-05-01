@@ -6,16 +6,14 @@
 package org.teamnine.client;
 
 import org.teamnine.common.Authenticator;
+import org.teamnine.common.FixedCipherOutputStream;
 import org.teamnine.common.ParseBuilder;
 import org.teamnine.server.UDPHandler;
-import org.teamnine.common.CipherOutputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import javax.crypto.CipherOutputStream;
+import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -126,16 +124,16 @@ public class Client implements ClientRunnable {
 			tcpClientSocket = new Socket(ip, port);
 			Cipher decCipher = Authenticator.getCipher(Cipher.DECRYPT_MODE, rand_cookie, password);
 			Cipher inCipher = Authenticator.getCipher(Cipher.ENCRYPT_MODE, rand_cookie, password);
-
+			OutputStream os = tcpClientSocket.getOutputStream();
 			CipherInputStream cipherInput = new CipherInputStream(
 					tcpClientSocket.getInputStream(),
 					decCipher
 			);
 			CipherOutputStream cipherOutput = new CipherOutputStream(
-					tcpClientSocket.getOutputStream(),
+					os,
 					inCipher
 			);
-			tcp_socket_out = new PrintWriter(cipherOutput, true);
+			tcp_socket_out = new PrintWriter(new FixedCipherOutputStream(cipherOutput, os, inCipher), true);
 			tcp_socket_in = new Scanner(cipherInput);
 			pb = new ParseBuilder(tcp_socket_in);
 

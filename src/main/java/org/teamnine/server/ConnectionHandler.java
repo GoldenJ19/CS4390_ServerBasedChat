@@ -1,14 +1,16 @@
 package org.teamnine.server;
 
+import org.teamnine.common.Authenticator;
+import org.teamnine.common.FixedCipherOutputStream;
 import org.teamnine.common.ParseBuilder;
 import org.teamnine.common.ParseException;
-import org.teamnine.common.Authenticator;
-import org.teamnine.common.CipherOutputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.*;
 import java.sql.Connection;
@@ -60,15 +62,17 @@ public class ConnectionHandler implements Runnable {
 		// accept connection and setup writers and readers.
 		try {
 			connectSocket = serverSocket.accept();
+			OutputStream os = connectSocket.getOutputStream();
+			Cipher encCipher = Authenticator.getCipher(Cipher.ENCRYPT_MODE, randCookie, secretKey);
 			CipherInputStream cipherInput = new CipherInputStream(
 					connectSocket.getInputStream(),
 					Authenticator.getCipher(Cipher.DECRYPT_MODE, randCookie, secretKey)
 			);
 			CipherOutputStream cipherOutput = new CipherOutputStream(
-					connectSocket.getOutputStream(),
-					Authenticator.getCipher(Cipher.ENCRYPT_MODE, randCookie, secretKey)
+					os,
+					encCipher
 			);
-			this.out = new PrintWriter(cipherOutput, true);
+			this.out = new PrintWriter(new FixedCipherOutputStream(cipherOutput, os, encCipher), true);
 			Scanner in = new Scanner(cipherInput);
 			this.pb = new ParseBuilder(in);
 
