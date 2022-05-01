@@ -150,19 +150,19 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private void historyResponse(String clientb) {
-		String sql = "SELECT clientFrom, clientTo, message FROM chat_log WHERE (clientFrom = ? AND clientTo = ?) OR (clientFrom = ? and clientTo = ?);";
+		String sql = "SELECT clientFrom, message FROM chat_log WHERE (clientFrom = ? AND clientTo = ?) OR (clientFrom = ? and clientTo = ?);";
 		try(PreparedStatement stmt = dbConn.prepareStatement(sql)){
 			stmt.setString(1, username);
 			stmt.setString(2, clientb);
-			stmt.setString(1, clientb);
-			stmt.setString(2, username);
+			stmt.setString(3, clientb);
+			stmt.setString(4, username);
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				out.print(
 					"START\n"+
 					"MSGTYPE: HISTORY_RESP\n"+
 					"SENDER: "+rs.getString(1)+"\n"+
-					"MESSAGE: "+rs.getString(3)+"\n"+
+					"MESSAGE: "+rs.getString(2)+"\n"+
 					"END\n"
 				);
 				out.flush();
