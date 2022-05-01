@@ -12,7 +12,9 @@ import org.teamnine.common.CipherOutputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -490,12 +492,15 @@ public class Client implements ClientRunnable {
 					@Override
 					public void runThrowable() throws Exception {
 						boolean inputGiven = false;
-						Scanner in = new Scanner(System.in);
+						BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 						while (!inputGiven) {
 							if (!chatting) {
 								/** User Selection Loop */
 								System.out.printf("Enter username of person you'd like to chat with (or enter %s):\n>", command_logoff);
-								receivedInput = in.nextLine().trim();
+								while(!in.ready()) {
+									Thread.sleep(200);
+								}
+								receivedInput = in.readLine().trim();
 								System.out.println();
 
 								// Check if user entered "LOG OFF"
@@ -504,7 +509,10 @@ public class Client implements ClientRunnable {
 									System.exit(0);
 								} else {
 									System.out.printf("Attempt to chat with user %s? (Y/N)\n>", receivedInput);
-									String response = in.nextLine();
+									while(!in.ready()) {
+										Thread.sleep(200);
+									}
+									String response = in.readLine().trim();
 									if (response.equalsIgnoreCase("Y")) {
 										inputGiven = true;
 									}
@@ -514,9 +522,10 @@ public class Client implements ClientRunnable {
 								while (!inputGiven) {
 									// Prompt user
 									System.out.printf("CHATTING WITH: %s\n%s:\n%s\n%s\n| %-60s |\n| %-60s |\n>", chattingWith, _separator, getMessageHistoryString(), _separator, "Enter 1 to send a chat, 2 to refresh your message history", "3 to view full message history, or 4 to disband chat session");
-									receivedInput = in.nextLine().trim();
-									if (System.in.available() > 0)
-										in.nextLine();
+									while(!in.ready()) {
+										Thread.sleep(200);
+									}
+									receivedInput = in.readLine().trim();
 									System.out.println();
 
 									// Determine what was entered
@@ -535,12 +544,18 @@ public class Client implements ClientRunnable {
 										case 1:
 											// Prompt user to enter the message they'd like to send:
 											System.out.printf("Enter the message you'd like to send:\n>");
-											receivedInput = in.nextLine().trim();
+											while(!in.ready()) {
+												Thread.sleep(200);
+											}
+											receivedInput = in.readLine().trim();
 											System.out.println("\n");
 
 											// Confirm message they entered is what they want to send.
 											System.out.printf("Please confirm you'd like to send the following message (Y/N):\n\"%s\"\n>", receivedInput);
-											String response = in.nextLine().trim();
+											while(!in.ready()) {
+												Thread.sleep(200);
+											}
+											String response = in.readLine().trim();
 											System.out.println();
 
 											// Parse their input

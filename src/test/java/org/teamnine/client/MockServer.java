@@ -243,19 +243,6 @@ public class MockServer implements ClientRunnable {
         out.printf("START\nMSGTYPE: CONNECTED\nEND\n");
     }
 
-    public static void main(String[] args) throws Exception {
-        MockServer server = new MockServer();
-        try {
-            portsUsed.add(6666);
-            server.subServers = new ArrayList<MockServer>();
-            server.parentServer = null;
-            server.threads = new ArrayList<Thread>();
-            server.start(6666);
-        } finally {
-            server.stop();
-        }
-    }
-
     public void runThrowable() throws Exception {
         // Get new port number
         int port = portsUsed.get(portsUsed.size()-1);
